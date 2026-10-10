@@ -1,0 +1,165 @@
+<!doctype html>
+<!-- Política de Privacidade pública, servida em /privacidade (rewrite no
+     vercel.json). É o link da tela de consentimento do Google: precisa ser HTML
+     estático, porque o robô de verificação não roda o JavaScript do app. Ao mudar
+     o que o app guarda, atualizar o texto e a data. -->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Política de Privacidade | Brik</title>
+  <meta name="description" content="Como o Brik coleta, usa, guarda e protege os seus dados, incluindo os dados recebidos pelo login com o Google." />
+  <link rel="icon" href="/logoBrik.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" />
+  <link rel="stylesheet" href="/paginas.css" />
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-conteudo">
+      <a href="/sobre"><img src="/logoBrik.png" alt="Brik" /></a>
+      <a class="botao" href="/login">Entrar</a>
+    </div>
+  </header>
+
+  <main>
+    <h1>Política de Privacidade</h1>
+    <p class="data">Última atualização: 10 de outubro de 2026</p>
+
+    <p>
+      Esta política explica como o <strong>Brik</strong> (app-brik.vercel.app) coleta, usa, guarda,
+      compartilha e protege os dados das pessoas que usam o aplicativo, inclusive os dados recebidos
+      quando você entra com a sua conta Google. Ela segue a Lei Geral de Proteção de Dados
+      (LGPD, Lei nº 13.709/2018).
+    </p>
+    <p>
+      O Brik é um aplicativo que analisa anúncios públicos de produtos usados e mostra os que estão
+      abaixo do preço médio, para quem quer comprar para uso próprio ou para revenda. Ele também ajuda
+      a organizar essas compras: estoque, cálculo de lucro e anúncios salvos.
+    </p>
+
+    <h2>1. Quem é o responsável pelos dados</h2>
+    <p>
+      O controlador dos dados é a equipe do Brik. Para qualquer assunto sobre privacidade, fale com a
+      gente pelo e-mail <a href="mailto:startupbrik@gmail.com">startupbrik@gmail.com</a>.
+    </p>
+
+    <h2>2. Dados que coletamos</h2>
+    <p><strong>Quando você cria a conta com e-mail e senha:</strong></p>
+    <ul>
+      <li>nome, e-mail e senha. A senha é guardada criptografada (hash) e ninguém da equipe tem acesso a ela.</li>
+    </ul>
+    <p><strong>Quando você entra com o Google:</strong></p>
+    <ul>
+      <li>
+        recebemos do Google apenas o seu <strong>nome</strong>, o seu <strong>endereço de e-mail</strong>
+        e a sua <strong>foto de perfil</strong> (permissões <code>openid</code>, <code>email</code> e
+        <code>profile</code>);
+      </li>
+      <li>não recebemos a sua senha do Google e não temos acesso a Gmail, Drive, contatos, agenda ou
+        qualquer outro dado da sua conta Google.</li>
+    </ul>
+    <p><strong>Dados que você informa no app:</strong></p>
+    <ul>
+      <li>perfil (opcional): nome de usuário, telefone, data de nascimento, localização e foto;</li>
+      <li>questionário inicial: orçamento, cidade, distância de busca e categoria de produto de interesse;</li>
+      <li>anúncios que você salva;</li>
+      <li>estoque: produtos que você comprou ou vendeu, com fotos, preços, datas e status;</li>
+      <li>cálculos de lucro feitos na calculadora.</li>
+    </ul>
+    <p><strong>Dados guardados no seu aparelho:</strong></p>
+    <ul>
+      <li>o token da sua sessão, para manter você conectado;</li>
+      <li>preferências de exibição, como ocultar valores no Dashboard.</li>
+    </ul>
+    <p>Não usamos cookies de publicidade nem ferramentas de rastreamento de terceiros.</p>
+
+    <h2>3. Como usamos os dados</h2>
+    <ul>
+      <li>criar a sua conta, identificar você e manter você conectado;</li>
+      <li>mostrar oportunidades de compra de acordo com a sua cidade, orçamento e interesses;</li>
+      <li>guardar o seu estoque, cálculos e anúncios salvos, para você acessar de qualquer aparelho;</li>
+      <li>mostrar o seu nome e a sua foto no seu perfil dentro do app;</li>
+      <li>responder quando você entra em contato com a gente.</li>
+    </ul>
+    <p>
+      <strong>Não vendemos</strong> os seus dados, <strong>não usamos</strong> os seus dados para publicidade
+      e <strong>não compartilhamos</strong> os seus dados com anunciantes ou corretores de dados.
+    </p>
+
+    <h2>4. Como usamos os dados recebidos do Google</h2>
+    <p>
+      O nome, o e-mail e a foto recebidos do Google são usados <strong>somente</strong> para criar e
+      identificar a sua conta no Brik e para mostrar o seu nome e foto no seu perfil. Esses dados não são
+      usados para publicidade, não são vendidos, não são usados para treinar modelos de inteligência
+      artificial e não são transferidos a terceiros, exceto aos provedores de infraestrutura listados
+      abaixo, apenas para o funcionamento do app.
+    </p>
+    <p>
+      O uso e a transferência de informações recebidas das APIs do Google seguem a
+      <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noreferrer">Política de Dados do Usuário dos Serviços de API do Google</a>,
+      incluindo os requisitos de Uso Limitado.
+    </p>
+
+    <h2>5. Onde os dados ficam e com quem compartilhamos</h2>
+    <p>Usamos estes serviços para hospedar o app e guardar os dados, apenas para o funcionamento do Brik:</p>
+    <ul>
+      <li><strong>Supabase:</strong> banco de dados e autenticação (conta, perfil, estoque, cálculos, salvos);</li>
+      <li><strong>Cloudflare R2:</strong> armazenamento das fotos do estoque e do perfil;</li>
+      <li><strong>Vercel:</strong> hospedagem do site;</li>
+      <li><strong>Google:</strong> login com a conta Google, quando você escolhe essa opção.</li>
+    </ul>
+    <p>
+      Esses serviços podem guardar dados em servidores fora do Brasil, com proteções compatíveis com a LGPD.
+      Também podemos compartilhar dados se uma lei ou ordem judicial exigir.
+    </p>
+
+    <h2>6. Como protegemos os dados</h2>
+    <ul>
+      <li>toda a comunicação com o Brik é criptografada (HTTPS);</li>
+      <li>o banco de dados usa regras de acesso por usuário: cada pessoa só lê e altera os próprios dados;</li>
+      <li>senhas são guardadas criptografadas e as chaves de acesso aos serviços ficam fora do código do app.</li>
+    </ul>
+    <p>Se houver um incidente de segurança que afete os seus dados, avisaremos você e a ANPD, como manda a lei.</p>
+
+    <h2>7. Por quanto tempo guardamos</h2>
+    <p>
+      Os dados ficam guardados enquanto a sua conta existir. Quando você pede a exclusão da conta, apagamos a
+      conta, o perfil, as fotos, o estoque, os cálculos e os anúncios salvos em até 15 dias, exceto o que a lei
+      nos obrigue a manter.
+    </p>
+
+    <h2>8. Seus direitos e como excluir seus dados</h2>
+    <p>Pela LGPD, você pode a qualquer momento:</p>
+    <ul>
+      <li>confirmar se tratamos os seus dados e ter acesso a eles;</li>
+      <li>corrigir dados incompletos ou errados (boa parte dá para editar no app, em Meu Perfil);</li>
+      <li>receber uma cópia dos seus dados;</li>
+      <li>pedir a exclusão da sua conta e de todos os seus dados;</li>
+      <li>revogar o consentimento e o acesso do Brik à sua conta Google, em
+        <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer">myaccount.google.com/permissions</a>.</li>
+    </ul>
+    <p>
+      Para exercer qualquer um desses direitos, envie um e-mail para
+      <a href="mailto:startupbrik@gmail.com">startupbrik@gmail.com</a> a partir do e-mail da sua conta.
+      Respondemos em até 15 dias.
+    </p>
+
+    <h2>9. Crianças</h2>
+    <p>O Brik não é direcionado a menores de 18 anos e não coleta dados de crianças de propósito.</p>
+
+    <h2>10. Mudanças nesta política</h2>
+    <p>
+      Se esta política mudar, a data no topo da página será atualizada. Mudanças importantes serão avisadas
+      dentro do app.
+    </p>
+
+    <footer>
+      <a href="/sobre">Sobre o Brik</a>
+      <a href="/login">Entrar</a>
+      <a href="mailto:startupbrik@gmail.com">startupbrik@gmail.com</a>
+    </footer>
+  </main>
+</body>
+</html>

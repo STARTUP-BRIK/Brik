@@ -151,10 +151,11 @@ function Login() {
         </Link>
       </p>
 
+      {/* Página estática em public/ (fora do React), por isso <a> e não Link. */}
       <p className="mt-3 text-center text-[11px] lg:text-left lg:text-xs">
-        <Link to="/privacidade" className={linkAuth}>
+        <a href="/privacidade.html" className={linkAuth}>
           Política de Privacidade
-        </Link>
+        </a>
       </p>
     </AuthLayout>
   )

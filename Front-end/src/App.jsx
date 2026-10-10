@@ -23,7 +23,6 @@ import Configuracoes from './pages/perfil/Configuracoes.jsx'
 import Ajuda from './pages/perfil/Ajuda.jsx'
 import Termos from './pages/perfil/Termos.jsx'
 import PrimeiroBrique from './pages/perfil/PrimeiroBrique.jsx'
-import PoliticaPrivacidade from './pages/PoliticaPrivacidade.jsx'
 
 const router = createBrowserRouter([
   // O app inteiro exige login e o quiz respondido (ver RotaProtegida).
@@ -80,8 +79,6 @@ const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
   { path: '/cadastro', element: <Cadastro /> },
   { path: '/recuperar-senha', element: <EmBreve title="Recuperar senha" /> },
-  // Pública de propósito: é o link da tela de consentimento do Google.
-  { path: '/privacidade', element: <PoliticaPrivacidade /> },
 ])
 
 function App() {
