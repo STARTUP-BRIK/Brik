@@ -23,9 +23,46 @@ function niceTicks(min, max) {
   return ticks
 }
 
+// Áreas da faixa entre as séries `a` e `b`, cortadas onde elas se cruzam. Cada
+// área junta os trechos seguidos de mesmo sinal (sem emendas no desenho) e sabe
+// se `a` está acima (positivo) ou abaixo (negativo) de `b`.
+function areasDaFaixa(a, b, xAt, yAt) {
+  const pedacos = []
+  for (let i = 0; i < a.length - 1; i++) {
+    const d0 = a[i] - b[i]
+    const d1 = a[i + 1] - b[i + 1]
+    const p = (x, va, vb) => ({ x, ya: yAt(va), yb: yAt(vb) })
+    const ini = p(xAt(i), a[i], b[i])
+    const fim = p(xAt(i + 1), a[i + 1], b[i + 1])
+    if (d0 * d1 < 0) {
+      // Cruzaram no meio do trecho: divide no ponto exato do cruzamento.
+      const t = d0 / (d0 - d1)
+      const meio = p(ini.x + t * (fim.x - ini.x), a[i] + t * (a[i + 1] - a[i]), b[i] + t * (b[i + 1] - b[i]))
+      pedacos.push({ de: ini, ate: meio, positivo: d0 > 0 }, { de: meio, ate: fim, positivo: d1 > 0 })
+    } else {
+      pedacos.push({ de: ini, ate: fim, positivo: d0 + d1 >= 0 })
+    }
+  }
+  const areas = []
+  for (const { de, ate, positivo } of pedacos) {
+    const ultima = areas[areas.length - 1]
+    if (ultima && ultima.positivo === positivo) ultima.trecho.push(ate)
+    else areas.push({ positivo, trecho: [de, ate] })
+  }
+  // Polígono: ida pela linha de a, volta pela linha de b.
+  return areas.map(({ positivo, trecho }) => ({
+    positivo,
+    pontos: [...trecho.map((q) => `${q.x},${q.ya}`), ...[...trecho].reverse().map((q) => `${q.x},${q.yb}`)].join(' '),
+  }))
+}
+
 // Gráfico de linhas (até ~4 séries) com área sob a primeira, marcador no fim,
 // cursor + dica com todas as séries no ponto e tabela para leitores de tela.
-function LineChart({ labels, series, formatValue, ariaLabel }) {
+// Com `faixa` ({ key, label, entre: [a, b], positivo, negativo }), em vez da área
+// sob a primeira série pinta o espaço entre as séries a e b: na cor `positivo`
+// onde a fica acima de b e na `negativo` onde fica abaixo. O valor da faixa
+// (a − b) entra na dica, na legenda e na tabela.
+function LineChart({ labels, series, faixa, formatValue, ariaLabel }) {
   const hidden = useHidden()
   const gradientId = `area-${useId().replace(/:/g, '')}`
   const svgRef = useRef(null)
@@ -72,6 +109,9 @@ function LineChart({ labels, series, formatValue, ariaLabel }) {
   }
 
   const primary = series[0]
+  const [sa, sb] = faixa ? faixa.entre.map((key) => series.find((s) => s.key === key)) : []
+  const diferenca = (i) => sa.values[i] - sb.values[i]
+  const corDaFaixa = (v) => (v >= 0 ? faixa.positivo : faixa.negativo)
   const tooltipLeft = active === null ? 0 : Math.min(Math.max((xAt(active) / W) * 100, 24), 76)
 
   return (
@@ -133,7 +173,13 @@ function LineChart({ labels, series, formatValue, ariaLabel }) {
               ),
           )}
 
-          {n > 1 && (
+          {faixa &&
+            n > 1 &&
+            areasDaFaixa(sa.values, sb.values, xAt, yAt).map(({ pontos, positivo }, i) => (
+              <polygon key={i} points={pontos} fill={positivo ? faixa.positivo : faixa.negativo} fillOpacity="0.25" />
+            ))}
+
+          {!faixa && n > 1 && (
             <polygon
               points={`${xAt(0)},${baseline} ${points(primary.values)} ${xAt(n - 1)},${baseline}`}
               fill={`url(#${gradientId})`}
@@ -197,6 +243,19 @@ function LineChart({ labels, series, formatValue, ariaLabel }) {
                 <span className="text-mute">{s.label}</span>
               </p>
             ))}
+            {faixa && (
+              <p className="flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-2.5 w-3.5 shrink-0 rounded-sm opacity-60"
+                  style={{ background: corDaFaixa(diferenca(active)) }}
+                />
+                <strong className="font-bold" style={{ color: corDaFaixa(diferenca(active)) }}>
+                  {hidden ? '••••' : `${diferenca(active) > 0 ? '+' : ''}${formatValue(diferenca(active))}`}
+                </strong>
+                <span className="text-mute">{faixa.label}</span>
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -219,6 +278,16 @@ function LineChart({ labels, series, formatValue, ariaLabel }) {
             {s.label}
           </li>
         ))}
+        {faixa && (
+          <li className="flex items-center gap-2">
+            {/* Meio azul, meio vermelho: a mesma área muda de cor com o sinal. */}
+            <span aria-hidden="true" className="flex h-2.5 w-4 overflow-hidden rounded-sm opacity-60">
+              <span className="flex-1" style={{ background: faixa.positivo }} />
+              <span className="flex-1" style={{ background: faixa.negativo }} />
+            </span>
+            {faixa.label}
+          </li>
+        )}
       </ul>
 
       <table className="sr-only">
@@ -231,6 +300,7 @@ function LineChart({ labels, series, formatValue, ariaLabel }) {
                 {s.label}
               </th>
             ))}
+            {faixa && <th scope="col">{faixa.label}</th>}
           </tr>
         </thead>
         <tbody>
@@ -240,6 +310,7 @@ function LineChart({ labels, series, formatValue, ariaLabel }) {
               {series.map((s) => (
                 <td key={s.key}>{hidden ? 'oculto' : formatValue(s.values[i])}</td>
               ))}
+              {faixa && <td>{hidden ? 'oculto' : formatValue(diferenca(i))}</td>}
             </tr>
           ))}
         </tbody>

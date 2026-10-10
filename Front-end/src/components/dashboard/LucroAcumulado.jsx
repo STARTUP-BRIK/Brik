@@ -12,11 +12,19 @@ const RANGES = [
   { value: '12M', label: '12M', compare: '12 meses anteriores' },
 ]
 
-// O lucro carrega a cor de resultado positivo; o investimento é a referência
-// neutra, em cinza tracejado, para o verde não significar duas coisas no gráfico.
+// Retorno em linha cheia e investimento em linha pontilhada. O lucro é o espaço
+// entre as duas (retorno − investimento): azul quando o retorno está acima do
+// investimento e vermelho quando cai abaixo dele.
 const SERIES_STYLE = {
-  lucro: { key: 'lucro', label: 'Lucro', color: COLOR.profit },
+  retorno: { key: 'retorno', label: 'Retorno', color: COLOR.strong },
   investimento: { key: 'investimento', label: 'Investimento', color: COLOR.mute, dashed: true },
+}
+const FAIXA_LUCRO = {
+  key: 'lucro',
+  label: 'Lucro',
+  entre: ['retorno', 'investimento'],
+  positivo: COLOR.accent,
+  negativo: COLOR.loss,
 }
 
 function LucroAcumulado({ step, data, hidden, onToggleHidden }) {
@@ -73,11 +81,13 @@ function LucroAcumulado({ step, data, hidden, onToggleHidden }) {
         <LineChart
           labels={period.labels}
           series={[
-            { ...SERIES_STYLE.lucro, values: period.lucro },
+            // O retorno é o que voltou: o investido mais o lucro do período.
+            { ...SERIES_STYLE.retorno, values: period.investimento.map((v, i) => v + period.lucro[i]) },
             { ...SERIES_STYLE.investimento, values: period.investimento },
           ]}
+          faixa={FAIXA_LUCRO}
           formatValue={formatBRL}
-          ariaLabel={`Lucro e investimento, ${compare.replace(' anteriores', '')}`}
+          ariaLabel={`Retorno, investimento e lucro, ${compare.replace(' anteriores', '')}`}
         />
       </div>
     </Card>
