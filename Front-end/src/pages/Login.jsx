@@ -22,7 +22,9 @@ function Login() {
   const location = useLocation()
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
-  const [lembrar, setLembrar] = useState(false)
+  // Já vem marcado: desmarcado, a sessão some ao fechar a aba (e o celular
+  // descarta abas paradas), o que parecia o app deslogando sozinho.
+  const [lembrar, setLembrar] = useState(true)
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
   // Conta criada mas e-mail nunca confirmado: pede o código antes de entrar.
