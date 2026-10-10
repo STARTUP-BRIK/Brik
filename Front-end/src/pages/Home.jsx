@@ -18,17 +18,24 @@ function Home() {
   const loading = useOpportunitiesStore((state) => state.loading)
   const fetchOpportunities = useOpportunitiesStore((state) => state.fetchOpportunities)
 
-  // Configurações do Meu Perfil: quais categorias e a partir de qual selo o feed mostra.
+  // Configurações do Meu Perfil: quais categorias, a partir de qual selo e se
+  // aparelhos com defeito entram no feed.
   const categorias = usePreferenciasStore((state) => state.categorias)
   const nivelMinimo = usePreferenciasStore((state) => state.nivelMinimo)
+  const mostrarDefeito = usePreferenciasStore((state) => state.mostrarDefeito)
   const visiveisNoFeed = CATEGORIAS.filter(({ value }) => categorias.includes(value))
   const cidade = usePreferenciasStore((state) => state.cidade)
   const setCidade = usePreferenciasStore((state) => state.setCidade)
-  // Botão Filtros: selos ligados e o máximo que a pessoa quer gastar.
+  // Botão Filtros: selos ligados, o máximo que a pessoa quer gastar e os
+  // aparelhos com defeito.
   const niveis = usePreferenciasStore((state) => state.niveis)
   const setNiveis = usePreferenciasStore((state) => state.setNiveis)
   const precoMaximo = usePreferenciasStore((state) => state.precoMaximo)
   const setPrecoMaximo = usePreferenciasStore((state) => state.setPrecoMaximo)
+  const filtroDefeito = usePreferenciasStore((state) => state.filtroDefeito)
+  const setFiltroDefeito = usePreferenciasStore((state) => state.setFiltroDefeito)
+  // Com os defeituosos escondidos pelas Configurações, o filtro não tem o que fazer.
+  const defeitoAtivo = mostrarDefeito ? filtroDefeito : 'todos'
 
   const [category, setCategory] = useState(null)
   const [query, setQuery] = useState('')
@@ -41,9 +48,12 @@ function Home() {
   const doConfig = useMemo(() => {
     const minimo = RANK[nivelMinimo] ?? 0
     return items.filter(
-      (item) => categorias.includes(item.category) && (RANK[item.opportunity_level] ?? 0) >= minimo,
+      (item) =>
+        categorias.includes(item.category) &&
+        (RANK[item.opportunity_level] ?? 0) >= minimo &&
+        (mostrarDefeito || !item.defeito),
     )
-  }, [items, categorias, nivelMinimo])
+  }, [items, categorias, nivelMinimo, mostrarDefeito])
 
   // Selos do botão Filtros: só os permitidos pelo mínimo das Configurações. Se
   // nenhum dos escolhidos é permitido (o mínimo mudou depois), valem todos.
@@ -68,9 +78,11 @@ function Home() {
     () =>
       doConfig.filter(
         (item) =>
-          niveisAtivos.includes(item.opportunity_level) && (precoMaximo == null || Number(item.price) <= precoMaximo),
+          niveisAtivos.includes(item.opportunity_level) &&
+          (precoMaximo == null || Number(item.price) <= precoMaximo) &&
+          (defeitoAtivo === 'todos' || (defeitoAtivo === 'so') === Boolean(item.defeito)),
       ),
-    [doConfig, niveisAtivos, precoMaximo],
+    [doConfig, niveisAtivos, precoMaximo, defeitoAtivo],
   )
 
   // Cidades com ofertas, da que tem mais para a que tem menos.
@@ -103,14 +115,15 @@ function Home() {
     [semCategoria, category],
   )
 
-  const filtrosOferta = niveisAtivos.length < permitidos.length || precoMaximo != null
+  const filtrosOferta = niveisAtivos.length < permitidos.length || precoMaximo != null || defeitoAtivo !== 'todos'
   const filtering = category !== null || query.trim() !== '' || cidade !== TODAS || filtrosOferta
-  // Há ofertas, mas as Configurações (categorias ou selo mínimo) esconderam todas.
+  // Há ofertas, mas as Configurações (categorias, selo mínimo ou defeito) esconderam todas.
   const escondidasPelaConfig = !filtering && items.length > 0
 
   function limparFiltrosOferta() {
     setNiveis(NIVEIS.map(({ value }) => value))
     setPrecoMaximo(null)
+    setFiltroDefeito('todos')
   }
 
   function clearFilters() {
@@ -133,6 +146,9 @@ function Home() {
       onNiveis={setNiveis}
       precoMaximo={precoMaximo}
       onPrecoMaximo={setPrecoMaximo}
+      defeito={defeitoAtivo}
+      defeitoPermitido={mostrarDefeito}
+      onDefeito={setFiltroDefeito}
       teto={teto}
       resultado={visible.length}
       onLimpar={limparFiltrosOferta}
@@ -291,7 +307,7 @@ function Home() {
                 {filtering
                   ? 'Tente outro termo, outra cidade, outro valor ou limpe os filtros.'
                   : escondidasPelaConfig
-                    ? 'Ligue mais categorias ou mostre selos a partir de "Bom negócio".'
+                    ? 'Ligue mais categorias, mostre selos a partir de "Bom negócio" ou mostre aparelhos com defeito.'
                     : 'As ofertas aparecem aqui assim que a próxima raspagem terminar.'}
               </p>
               {escondidasPelaConfig && (

@@ -19,6 +19,8 @@ export const PREFERENCIAS_PADRAO = {
   // Configurações: o que o Início mostra.
   categorias: CATEGORIAS.map((c) => c.value),
   nivelMinimo: 'boa',
+  // false esconde de vez os aparelhos com defeito (o botão Filtros nem oferece).
+  mostrarDefeito: true,
 
   // Início: filtro de cidade (TODAS, um grupo como 'grande-recife' ou o nome
   // da cidade). Fica guardado para o Início reabrir na cidade de sempre.
@@ -28,6 +30,8 @@ export const PREFERENCIAS_PADRAO = {
   // Configurações) e o máximo que a pessoa quer gastar (null = sem limite).
   niveis: NIVEIS.map((n) => n.value),
   precoMaximo: null,
+  // Aparelhos com defeito: 'todos', 'sem' (só sem defeito) ou 'so' (só com).
+  filtroDefeito: 'todos',
 
   // Notificações: só as escolhas; os avisos ainda não são enviados.
   notificacoes: {
@@ -53,6 +57,8 @@ export const usePreferenciasStore = create(
       setCidade: (cidade) => set({ cidade }),
       setNiveis: (niveis) => set({ niveis }),
       setPrecoMaximo: (precoMaximo) => set({ precoMaximo }),
+      setMostrarDefeito: (mostrarDefeito) => set({ mostrarDefeito }),
+      setFiltroDefeito: (filtroDefeito) => set({ filtroDefeito }),
       // Pelo menos uma categoria fica ligada, senão o Início ficaria sempre vazio.
       alternarCategoria: (value) =>
         set(({ categorias }) => {

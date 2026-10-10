@@ -14,9 +14,11 @@ const COLUNAS = {
   ocultarValores: 'ocultar_valores',
   categorias: 'categorias',
   nivelMinimo: 'nivel_minimo',
+  mostrarDefeito: 'mostrar_defeito',
   cidade: 'cidade',
   niveis: 'niveis',
   precoMaximo: 'preco_maximo',
+  filtroDefeito: 'filtro_defeito',
   notificacoes: 'notificacoes',
   passosFeitos: 'passos_feitos',
 }

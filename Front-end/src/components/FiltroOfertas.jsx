@@ -5,13 +5,16 @@ import { formatBRL, formatInt } from '../lib/format.js'
 import { classeBotaoPainel, classePosicaoPainel, useFecharPainel } from '../lib/usePainel.js'
 
 // Botão "Filtros" do header verde do Início, ao lado da cidade. Abre um painel
-// com os selos (quais aparecem) e o máximo que a pessoa quer gastar. Tudo vale
+// com os selos (quais aparecem), os aparelhos com defeito e o máximo que a
+// pessoa quer gastar. Tudo vale
 // na hora — o feed atrás já muda —, e o botão do rodapé só fecha, mostrando
 // quantas ofertas sobraram.
 //
 // `niveis`: os selos ligados (já só os que as Configurações permitem);
 // `permitidos`: os selos a partir do mínimo das Configurações. Os outros
 // aparecem desligados, com o aviso.
+// `defeito`: 'todos', 'sem' ou 'so'; `defeitoPermitido` false quando as
+// Configurações escondem os aparelhos com defeito (a escolha fica desligada).
 // `teto`: o maior preço do feed, arredondado — é o fim da régua de preço.
 // `lateral`: a versão da coluna lateral do desktop, com um resumo do que está
 // filtrado no próprio botão.
@@ -23,6 +26,13 @@ const SELO = {
   extraordinaria: 'bg-level-extra text-white',
 }
 
+// Escolhas de aparelhos com defeito; `resumo` é o que aparece no botão lateral.
+const DEFEITO = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'sem', label: 'Sem defeito', resumo: 'sem defeito' },
+  { value: 'so', label: 'Só com defeito', resumo: 'só com defeito' },
+]
+
 const PASSO = 50
 const ATALHOS = [500, 1000, 2000, 3000, 5000]
 
@@ -32,6 +42,9 @@ function FiltroOfertas({
   onNiveis,
   precoMaximo,
   onPrecoMaximo,
+  defeito,
+  defeitoPermitido,
+  onDefeito,
   teto,
   resultado,
   onLimpar,
@@ -43,15 +56,19 @@ function FiltroOfertas({
   useFecharPainel(aberto, setAberto, raizRef, botaoRef)
 
   const filtraNivel = niveis.length < permitidos.length
-  const ativos = (filtraNivel ? 1 : 0) + (precoMaximo != null ? 1 : 0)
+  const ativos = (filtraNivel ? 1 : 0) + (precoMaximo != null ? 1 : 0) + (defeito !== 'todos' ? 1 : 0)
   const atalhos = ATALHOS.filter((valor) => valor < teto).slice(0, 4)
   const minimo = NIVEIS.find((n) => n.value === permitidos[0])
 
-  // Resumo da versão lateral: "Ótimo, Extraordinário · até R$ 1.000", ou
+  // Resumo da versão lateral: "Ótimo, Extraordinário · sem defeito · até R$ 1.000", ou
   // "Todas as ofertas". Do selo, só a primeira palavra.
   const selosLigados = NIVEIS.filter((n) => niveis.includes(n.value)).map((n) => n.label.split(' ')[0])
   const resumo =
-    [filtraNivel && selosLigados.join(', '), precoMaximo != null && `até ${formatBRL(precoMaximo)}`]
+    [
+      filtraNivel && selosLigados.join(', '),
+      DEFEITO.find((d) => d.value === defeito)?.resumo,
+      precoMaximo != null && `até ${formatBRL(precoMaximo)}`,
+    ]
       .filter(Boolean)
       .join(' · ') || 'Todas as ofertas'
 
@@ -156,6 +173,37 @@ function FiltroOfertas({
           </section>
 
           <section className="painel-item mt-3.5 sm:mt-5" style={{ '--i': 1 }}>
+            <h2 id="filtro-defeito" className="text-[11px] font-bold uppercase tracking-wide text-mute">
+              Aparelhos com defeito
+            </h2>
+            <div role="radiogroup" aria-labelledby="filtro-defeito" className="mt-2 flex flex-wrap gap-1.5">
+              {DEFEITO.map(({ value, label }) => {
+                const ativo = defeitoPermitido && defeito === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={ativo}
+                    disabled={!defeitoPermitido}
+                    onClick={() => onDefeito(value)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                      ativo ? 'bg-brik text-paper' : 'bg-surface-raise text-ink hover:bg-line/70 disabled:hover:bg-surface-raise'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-1.5 text-[11px] leading-snug text-mute">
+              {defeitoPermitido
+                ? 'A média de mercado é de aparelhos sem defeito.'
+                : 'Suas Configurações escondem os aparelhos com defeito.'}
+            </p>
+          </section>
+
+          <section className="painel-item mt-3.5 sm:mt-5" style={{ '--i': 2 }}>
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="text-[11px] font-bold uppercase tracking-wide text-mute">Quanto posso gastar</h2>
               <span key={precoMaximo ?? 'livre'} className="painel-valor text-sm font-bold text-brik">
@@ -214,7 +262,7 @@ function FiltroOfertas({
             </div>
           </section>
 
-          <div className="painel-item mt-3.5 flex gap-2 sm:mt-5" style={{ '--i': 2 }}>
+          <div className="painel-item mt-3.5 flex gap-2 sm:mt-5" style={{ '--i': 3 }}>
             <button
               type="button"
               onClick={onLimpar}
