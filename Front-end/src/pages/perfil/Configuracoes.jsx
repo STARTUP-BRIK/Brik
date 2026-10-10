@@ -9,6 +9,8 @@ function Configuracoes() {
   const alternarCategoria = usePreferenciasStore((state) => state.alternarCategoria)
   const nivelMinimo = usePreferenciasStore((state) => state.nivelMinimo)
   const setNivelMinimo = usePreferenciasStore((state) => state.setNivelMinimo)
+  const mostrarDefeito = usePreferenciasStore((state) => state.mostrarDefeito)
+  const setMostrarDefeito = usePreferenciasStore((state) => state.setMostrarDefeito)
   const modoEscuro = usePreferenciasStore((state) => state.modoEscuro)
   const setModoEscuro = usePreferenciasStore((state) => state.setModoEscuro)
 
@@ -31,6 +33,15 @@ function Configuracoes() {
             </Linha>
           )
         })}
+      </Grupo>
+
+      <Grupo titulo="Aparelhos com defeito">
+        <Linha
+          titulo="Mostrar aparelhos com defeito"
+          detalhe="Desligado, eles somem do Início. Ligado, dá para escolher no botão Filtros: todos, sem defeito ou só com defeito."
+        >
+          <Interruptor ligado={mostrarDefeito} onChange={setMostrarDefeito} label="Mostrar aparelhos com defeito" />
+        </Linha>
       </Grupo>
 
       <section>
