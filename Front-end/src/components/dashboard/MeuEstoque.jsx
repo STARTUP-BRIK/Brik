@@ -4,10 +4,12 @@ import { COLOR } from './palette.js'
 import { useReveal } from './reveal.js'
 import { Card, Eyebrow, Masked, Segmented } from './ui.jsx'
 
-// Três estados, três tons: neutro enquanto espera, âmbar quando está preso a
-// alguém, verde quando virou resultado.
+// Neutro enquanto espera, âmbar quando está travado (no conserto ou preso a
+// alguém), verde quando virou resultado. "Reservado" só existe nos dados de exemplo.
 const STATUS = {
+  nao_anunciado: { label: 'Não anunciado', className: 'text-mute' },
   anunciado: { label: 'Anunciado', className: 'text-mute' },
+  conserto: { label: 'Conserto', className: 'text-warn' },
   reservado: { label: 'Reservado', className: 'text-warn' },
   vendido: { label: 'Vendido', className: 'text-profit' },
 }
@@ -22,9 +24,20 @@ const EMPTY_TEXT = {
   vendidos: { title: 'Nenhuma venda ainda', hint: 'Os itens que você vender aparecem aqui.' },
 }
 
-function Photo({ src }) {
+// `src` é a miniatura; se ela não existir (foto antiga), cai na `reserva`, a foto inteira.
+function Photo({ src, reserva }) {
+  const [falhou, setFalhou] = useState(false)
   if (src) {
-    return <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+    return (
+      <img
+        src={falhou ? reserva : src}
+        alt=""
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={() => !falhou && reserva && reserva !== src && setFalhou(true)}
+        className="h-14 w-14 shrink-0 rounded-xl object-cover"
+      />
+    )
   }
   return (
     <span
@@ -43,7 +56,7 @@ function Row({ item }) {
   return (
     <li>
       <Card as="div" className="flex items-center gap-3 p-3">
-        <Photo src={item.imagem} />
+        <Photo key={item.imagem} src={item.imagem} reserva={item.imagemGrande} />
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold">{item.titulo}</p>

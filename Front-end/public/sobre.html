@@ -1,0 +1,76 @@
+<!doctype html>
+<!-- Página inicial pública, servida em /sobre (rewrite no vercel.json). É a
+     "página inicial do aplicativo" cadastrada no Google: precisa descrever o app
+     sem login e linkar a política, em HTML estático (o robô não roda o JS). -->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brik | Garimpe Ofertas</title>
+  <meta name="description" content="O Brik encontra anúncios de produtos usados abaixo do preço médio e ajuda você a organizar compras e revendas." />
+  <link rel="icon" href="/logoBrik.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" />
+  <link rel="stylesheet" href="/paginas.css" />
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-conteudo">
+      <a href="/sobre"><img src="/logoBrik.png" alt="Brik" /></a>
+      <a class="botao" href="/login">Entrar</a>
+    </div>
+  </header>
+
+  <main>
+    <h1>Garimpe ofertas abaixo do preço</h1>
+    <p class="chamada">
+      O Brik analisa anúncios públicos de produtos usados, como os da OLX, calcula o preço médio de cada
+      modelo e mostra só os que estão abaixo da média. É para quem quer comprar barato para uso próprio
+      ou para revender com lucro.
+    </p>
+    <p><a class="botao" href="/login">Entrar ou criar conta</a></p>
+
+    <h2>O que dá para fazer no Brik</h2>
+    <div class="cartoes">
+      <div class="cartao">
+        <h3>Oportunidades</h3>
+        <p>Anúncios abaixo do preço médio, filtrados pela sua cidade, orçamento e categoria.</p>
+      </div>
+      <div class="cartao">
+        <h3>Salvos</h3>
+        <p>Guarde os anúncios que interessam para decidir depois.</p>
+      </div>
+      <div class="cartao">
+        <h3>Estoque</h3>
+        <p>Registre o que você comprou e vendeu, com fotos, preços e status.</p>
+      </div>
+      <div class="cartao">
+        <h3>Calculadora</h3>
+        <p>Calcule o lucro de um brique antes de fechar negócio.</p>
+      </div>
+      <div class="cartao">
+        <h3>Dashboard</h3>
+        <p>Acompanhe capital investido, vendas e lucro.</p>
+      </div>
+      <div class="cartao">
+        <h3>Verificar IMEI</h3>
+        <p>Confira o IMEI de um celular antes de comprar.</p>
+      </div>
+    </div>
+
+    <h2>Sua conta</h2>
+    <p>
+      Você pode entrar com e-mail e senha ou com a sua conta Google. Com o Google, o Brik recebe só o seu
+      nome, e-mail e foto de perfil, usados para criar a sua conta. Veja os detalhes na nossa
+      <a href="/privacidade">Política de Privacidade</a>.
+    </p>
+
+    <footer>
+      <a href="/privacidade">Política de Privacidade</a>
+      <a href="/login">Entrar</a>
+      <a href="mailto:startupbrik@gmail.com">startupbrik@gmail.com</a>
+    </footer>
+  </main>
+</body>
+</html>

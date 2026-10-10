@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import BrandHeader from '../components/BrandHeader.jsx'
+import { FotoPerfil, SeloProvedor } from '../components/conta.jsx'
 import {
-  AvatarIcon,
   BellIcon,
   ChevronRightIcon,
   DocIcon,
@@ -11,10 +11,12 @@ import {
   SupportIcon,
   TrophyIcon,
 } from '../components/icons.jsx'
+import { fotoDaConta, nomeDoProvedor, usePerfil } from '../lib/conta.js'
 import { supabase } from '../lib/supabase.js'
 
-// "Meu Perfil": conta e ajustes. O nome ainda é um genérico. Cada item da lista
-// abre a sua tela (pages/perfil/); o "Sair" encerra a sessão.
+// "Meu Perfil": conta e ajustes. Foto e nome vêm do login social, quando é o
+// caso, ou do perfil. Cada item da lista abre a sua tela (pages/perfil/); o
+// "Sair" encerra a sessão.
 
 const ITENS = [
   { key: 'privacidade', label: 'Privacidade', Icon: LockIcon, to: '/perfil/privacidade' },
@@ -58,6 +60,8 @@ function Item({ label, Icon, perigo, to, onClick }) {
 
 function Perfil() {
   const navigate = useNavigate()
+  const { user, perfil, social } = usePerfil()
+  const nome = (social && nomeDoProvedor(user)) || perfil?.nome || perfil?.usuario || 'Usuário'
 
   async function sair() {
     await supabase.auth.signOut()
@@ -70,14 +74,14 @@ function Perfil() {
 
       <main className="px-4 lg:pt-6">
         <div className="flex flex-col items-center pt-6">
-          <span
-            aria-hidden="true"
-            className="flex h-24 w-24 items-center justify-center rounded-full bg-brik-dark text-white shadow-[0_8px_20px_-10px_rgba(43,43,43,0.6)]"
-          >
-            <AvatarIcon className="h-14 w-14" />
-          </span>
+          <FotoPerfil
+            src={fotoDaConta(user, perfil)}
+            className="h-24 w-24 shadow-[0_8px_20px_-10px_rgba(43,43,43,0.6)]"
+            iconClassName="h-14 w-14"
+          />
 
-          <p className="mt-3 text-lg font-bold text-ink">Usuário</p>
+          <p className="mt-3 text-lg font-bold text-ink">{nome}</p>
+          <SeloProvedor social={social} className="mt-1.5" />
 
           <Link
             to="/perfil/editar"
@@ -111,8 +115,8 @@ function Perfil() {
         <h1 className="sr-only">Meu Perfil</h1>
 
         <ul className="mt-5 flex flex-col gap-2.5">
-          {ITENS.map((item) => (
-            <Item key={item.key} {...item} onClick={item.key === 'sair' ? sair : undefined} />
+          {ITENS.map(({ key, ...item }) => (
+            <Item key={key} {...item} onClick={key === 'sair' ? sair : undefined} />
           ))}
         </ul>
       </main>

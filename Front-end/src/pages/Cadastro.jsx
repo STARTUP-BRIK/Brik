@@ -11,7 +11,7 @@ import {
   linkAuth,
 } from '../components/auth.jsx'
 import { CallIcon, MailIcon, PersonIcon } from '../components/icons.jsx'
-import { mascaraTelefone } from '../lib/format.js'
+import { mascaraTelefone, mascaraUsuario } from '../lib/format.js'
 import { supabase } from '../lib/supabase.js'
 import { mensagemErro } from '../stores/useAuthStore.js'
 
@@ -20,9 +20,6 @@ import { mensagemErro } from '../stores/useAuthStore.js'
 // copia para public.profiles.
 
 const VAZIO = { usuario: '', email: '', telefone: '', senha: '', confirmar: '' }
-
-// Mesma regra do check em profiles.usuario: minúsculas, números, "_" e ".".
-const mascaraUsuario = (valor) => valor.toLowerCase().replace(/[^a-z0-9_.]/g, '').slice(0, 20)
 
 function Cadastro() {
   const navigate = useNavigate()
@@ -93,7 +90,12 @@ function Cadastro() {
 
   return (
     <AuthLayout>
-      <h1 className="text-center text-lg font-bold uppercase tracking-wide">Cadastre-se</h1>
+      <h1 className="text-center text-lg font-bold uppercase tracking-wide lg:-order-2 lg:text-left lg:text-2xl lg:normal-case lg:tracking-normal">
+        Cadastre-se
+      </h1>
+      <p className="hidden lg:-order-2 lg:mt-1 lg:block lg:text-base lg:text-mute">
+        Crie sua conta e comece a garimpar ofertas.
+      </p>
 
       <form onSubmit={cadastrar} className="mt-5 flex flex-col gap-3">
         <Campo
@@ -125,7 +127,7 @@ function Cadastro() {
           {...campo('confirmar')}
         />
         {senhasDiferentes && (
-          <p id="senhas-diferentes" role="alert" className="-mt-1.5 text-[11px] text-loss-soft">
+          <p id="senhas-diferentes" role="alert" className="-mt-1.5 text-[11px] text-loss-soft lg:text-xs lg:text-loss">
             As senhas não conferem.
           </p>
         )}
@@ -137,7 +139,7 @@ function Cadastro() {
 
       <RedesSociais acao="Cadastrar" />
 
-      <p className="mt-6 text-center text-[11px] text-paper/80">
+      <p className="mt-6 text-center text-[11px] text-paper/80 lg:mt-8 lg:text-left lg:text-sm lg:text-mute">
         Já tem uma conta?{' '}
         <Link to="/login" viewTransition className={linkAuth}>
           Faça login

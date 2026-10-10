@@ -1,0 +1,100 @@
+/* Páginas públicas estáticas (sobre.html, privacidade.html). Ficam fora do React
+   de propósito: o robô de verificação do Google lê o HTML cru, sem rodar o JS.
+   Cores da marca escritas à mão, como na splash do index.html. */
+:root {
+  --fundo: #f8f7f4;
+  --cartao: #ffffff;
+  --texto: #1f2a2e;
+  --texto-suave: #55636a;
+  --linha: #e3e1dc;
+  --marca: #0f4c5c;
+  --marca-escura: #0a3540;
+  --destaque: #a8dccf;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #0d1a1e;
+    --cartao: #14252a;
+    --texto: #ecebe7;
+    --texto-suave: #a5b3b7;
+    --linha: #24383e;
+    --marca: #a8dccf;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: "Rubik", ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.topo {
+  background: radial-gradient(120% 80% at 50% 38%, #1d6173, #0f4c5c 55%, #0a3540);
+  padding: 20px 16px;
+}
+.topo-conteudo {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.topo img { height: 36px; width: auto; display: block; }
+.topo a.botao { background: #f8f7f4; color: #0f4c5c; }
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+}
+
+h1 { font-size: 28px; line-height: 1.2; margin: 0 0 4px; letter-spacing: -0.01em; }
+h2 { font-size: 18px; margin: 32px 0 8px; }
+p, ul { margin: 0 0 12px; }
+ul { padding-left: 22px; }
+li { margin-bottom: 6px; }
+a { color: var(--marca); text-underline-offset: 2px; }
+strong { font-weight: 500; }
+
+.data { color: var(--texto-suave); font-size: 13px; margin-bottom: 24px; }
+.chamada { font-size: 18px; color: var(--texto-suave); }
+
+.botao {
+  display: inline-block;
+  padding: 10px 20px;
+  border-radius: 12px;
+  background: var(--marca);
+  color: var(--fundo);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.cartao {
+  background: var(--cartao);
+  border: 1px solid var(--linha);
+  border-radius: 16px;
+  padding: 16px;
+}
+.cartao h3 { font-size: 15px; margin: 0 0 4px; }
+.cartao p { margin: 0; color: var(--texto-suave); font-size: 14px; }
+
+footer {
+  border-top: 1px solid var(--linha);
+  margin-top: 40px;
+  padding-top: 16px;
+  color: var(--texto-suave);
+  font-size: 13px;
+}
+footer a { margin-right: 16px; }

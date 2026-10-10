@@ -1,0 +1,36 @@
+name: Raspagem 5 primeiras páginas
+
+# Sem schedule: o do GitHub atrasava horas ou pulava execuções. Quem dispara
+# é o pg_cron do Supabase (job 'raspagem-recentes'): 09h17, 11h17, ..., 23h17 em
+# Recife = 12h17, 14h17, ..., 02h17 UTC. A completa roda às 07h17; de 00h às 07h
+# nada roda.
+on:
+  workflow_dispatch:
+    inputs:
+      buscas:
+        description: 'Produtos, separados por espaço (iphone ps5 ps4 ps3 ps2 xbox). Vazio = todos'
+        type: string
+        default: ''
+      paginas:
+        description: 'Quantas das primeiras páginas raspar'
+        type: string
+        default: '5'
+      dry_run:
+        description: 'Dry-run: só raspa, sem IA e sem gravar no banco'
+        type: boolean
+        default: false
+
+concurrency:
+  group: raspagem-brik
+  cancel-in-progress: false
+
+jobs:
+  raspagem:
+    uses: ./.github/workflows/raspagem-base.yml
+    secrets: inherit
+    with:
+      buscas: ${{ inputs.buscas }}
+      paginas: ${{ inputs.paginas || '5' }}
+      primeiras: true
+      dry_run: ${{ inputs.dry_run == true }}
+      timeout: 60
