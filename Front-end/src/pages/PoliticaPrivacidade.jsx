@@ -8,7 +8,7 @@ import BrandHeader from '../components/BrandHeader.jsx'
 const ATUALIZADA_EM = '10 de outubro de 2026'
 
 // E-mail mostrado na seção de contato. Vazio, a seção fica sem e-mail.
-const EMAIL_CONTATO = ''
+const EMAIL_CONTATO = 'startupbrik@gmail.com'
 
 function Secao({ titulo, children }) {
   return (
