@@ -150,6 +150,12 @@ function Login() {
           Cadastre-se
         </Link>
       </p>
+
+      <p className="mt-3 text-center text-[11px] lg:text-left lg:text-xs">
+        <Link to="/privacidade" className={linkAuth}>
+          Política de Privacidade
+        </Link>
+      </p>
     </AuthLayout>
   )
 }
