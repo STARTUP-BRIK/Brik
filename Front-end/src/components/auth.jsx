@@ -175,7 +175,7 @@ export function ErroForm({ children }) {
 }
 
 // Login social: sai do app para o provedor e volta já logado em `destino`. Conta
-// nova ganha perfil pelo trigger do banco e cai no quiz pela RotaProtegida.
+// nova ganha perfil pelo trigger do banco e cai no onboarding pela RotaProtegida.
 export function RedesSociais({ acao = 'Entrar', lembrar = true, destino = '/' }) {
   const [indo, setIndo] = useState(null)
   const [erro, setErro] = useState('')

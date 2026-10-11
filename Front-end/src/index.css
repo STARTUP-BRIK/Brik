@@ -57,6 +57,19 @@
 
   /* Sombra dos cards: discreta, só o suficiente para descolar do fundo marfim. */
   --shadow-card: 0 1px 2px rgba(43, 43, 43, 0.06), 0 1px 1px rgba(43, 43, 43, 0.04);
+
+  /* Onboarding (pages/onboarding), os tokens do canvas do onboarding. O destaque
+     é o petróleo no claro e o verde-água no escuro; o botão principal inverte
+     (petróleo com texto marfim no claro, marfim com texto petróleo no escuro). */
+  --color-ob-destaque: #0f4c5c;
+  --color-ob-titulo: #2b2b2b;
+  --color-ob-botao: #0f4c5c;
+  --color-ob-botao-texto: #f8f7f4;
+  --color-ob-sobre-destaque: #f8f7f4; /* check sobre o destaque */
+  --color-ob-circulo: #ffffff; /* círculos com ícone petróleo dentro */
+  --color-ob-brilho: #0f4c5c; /* brilho radial do fundo */
+  --color-ob-caixa-brik: rgba(15, 76, 92, 0.06); /* caixa "Com o Brik" */
+  --color-ob-hover: #0a3540;
 }
 
 /* Rampa da rosca de ROIs (ver dashboard/palette.js): quanto mais forte, melhor
@@ -105,6 +118,16 @@
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
 
+  --color-ob-destaque: #a8dccf;
+  --color-ob-titulo: #f8f7f4;
+  --color-ob-botao: #f8f7f4;
+  --color-ob-botao-texto: #0f4c5c;
+  --color-ob-sobre-destaque: #0e1618;
+  --color-ob-circulo: #f8f7f4;
+  --color-ob-brilho: #2a8aa0;
+  --color-ob-caixa-brik: #123f4a;
+  --color-ob-hover: #f8f7f4;
+
   --roi-1: #7cc3d2;
   --roi-2: #5aa3b3;
   --roi-3: #428391;
@@ -126,6 +149,8 @@
   --color-surface-raise: #efeee9;
   --color-loss: #b3432f;
   --color-profit: #2f6b4a;
+  --color-gain: #2f6b4a;
+  --color-gain-bg: #ddefe8;
 }
 
 body {
@@ -744,5 +769,88 @@ body {
   .reveal,
   .reveal-surface {
     animation: none;
+  }
+}
+
+/* Onboarding --------------------------------------------------------------
+   As animações das telas de pages/onboarding, iguais às do canvas. Cada
+   elemento animado leva a classe ob-anima e o `animation` inline (duração,
+   curva e atraso do canvas); o estilo-base é o estado final, então com
+   movimento reduzido basta desligar as animações. */
+@keyframes ob-sobe-8 { from { opacity: 0; transform: translateY(8px); } }
+@keyframes ob-sobe-10 { from { opacity: 0; transform: translateY(10px); } }
+@keyframes ob-sobe-14 { from { opacity: 0; transform: translateY(14px); } }
+@keyframes ob-sobe-20 { from { opacity: 0; transform: translateY(20px); } }
+@keyframes ob-abre { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes ob-mostra { from { opacity: 0; } }
+@keyframes ob-apaga { from { opacity: 1; } }
+
+/* 02 · rolagem e relógio */
+@keyframes ob-rolar { to { transform: translateY(-50%); } }
+@keyframes ob-pisca { 50% { opacity: 0.25; } }
+
+/* 02b · o quadrado acende, a grade aproxima e ele cresce até virar o card */
+@keyframes ob-acende {
+  0% { opacity: 0; transform: scale(0.5); }
+  60% { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes ob-aproxima { from { opacity: 1; transform: scale(1); } }
+@keyframes ob-cresce { from { clip-path: inset(213px 94px round 8px); } }
+
+/* 03 · ondas do radar e entrada dos ícones */
+@keyframes ob-onda {
+  0% { transform: scale(0.38); opacity: 0.7; }
+  100% { transform: scale(1.08); opacity: 0; }
+}
+@keyframes ob-entra {
+  0% { opacity: 0; transform: scale(0.4); }
+  70% { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* 06 · barras de horas */
+@keyframes ob-enche-x { from { transform: scaleX(0); } }
+@keyframes ob-enche-y { from { transform: scaleY(0); } }
+
+/* 09 · o ponto do alerta pulsa */
+@keyframes ob-brilho {
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-ob-destaque) 18%, transparent); }
+}
+
+/* 14 · radar girando e pontos acendendo */
+@keyframes ob-gira { to { transform: rotate(360deg); } }
+@keyframes ob-ponto {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+/* 15 a 18 · a pílula do onboarding, a notificação e a folha da permissão */
+@keyframes ob-pulsa { 50% { box-shadow: 0 0 0 6px rgba(168, 220, 207, 0.2); } }
+@keyframes ob-desce {
+  0% { opacity: 0; transform: translateY(-130%); }
+  70% { opacity: 1; transform: translateY(6px); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes ob-folha { from { transform: translateY(100%); } }
+@keyframes ob-bolha {
+  0% { opacity: 0; transform: scale(0.94); }
+  55% { transform: scale(1.007); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* Campos sobre o fundo verde (01a) e no tema da tela (19b). */
+.ob-campo-verde:focus-within {
+  box-shadow: 0 0 0 2px #a8dccf, 0 4px 12px -6px rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-anima {
+    animation: none !important;
+  }
+
+  /* As ondas do radar só existem animadas. */
+  .ob-onda {
+    opacity: 0;
   }
 }
