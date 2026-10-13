@@ -38,13 +38,12 @@ export const TEMPO_BUSCA = {
   h3: { titulo: 'Mais de 2 horas', detalhe: 'Quase um turno de trabalho', horas: 3, curto: 'mais de 2 h' },
 }
 
-// 08. `minutos`: onde a pessoa entra na linha do tempo da 09. `marco`: o rótulo
-// dela ali. `curto`: como volta nas telas seguintes.
+// 08. `curto`: como a resposta volta nas telas seguintes.
 export const TEMPO_RESPOSTA = {
-  hora: { titulo: 'Na hora', detalhe: 'Menos de 5 min', minutos: 4, marco: 'Menos de 5 min', curto: 'na hora' },
-  rapido: { titulo: 'Rápido', detalhe: 'Até 30 min', minutos: 30, marco: 'Até 30 min', curto: 'até 30 min depois' },
-  quando: { titulo: 'Quando dá', detalhe: 'Algumas horas depois', minutos: 180, marco: 'Algumas horas', curto: 'algumas horas depois' },
-  lembro: { titulo: 'Quando lembro', detalhe: 'No fim do dia ou depois', minutos: 600, marco: 'No fim do dia', curto: 'no fim do dia ou depois' },
+  hora: { titulo: 'Na hora', detalhe: 'Menos de 5 min', curto: 'na hora' },
+  rapido: { titulo: 'Rápido', detalhe: 'Até 30 min', curto: 'até 30 min depois' },
+  quando: { titulo: 'Quando dá', detalhe: 'Algumas horas depois', curto: 'algumas horas depois' },
+  lembro: { titulo: 'Quando lembro', detalhe: 'No fim do dia ou depois', curto: 'no fim do dia ou depois' },
 }
 
 // 10. As mesmas categorias do app (config/categorias.js).

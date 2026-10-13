@@ -13,7 +13,10 @@ import { TODAS, cidadeDe, passaNaCidade } from '../config/cidades.js'
 // Posição de cada selo na escala (boa = 0), para comparar com o nível mínimo.
 const RANK = Object.fromEntries(NIVEIS.map(({ value }, i) => [value, i]))
 
-function Home() {
+// `desfocado`: categorias e anúncios desfocados, com o header nítido (a
+// demonstração do feed no onboarding, para o olho ir para o botão dela).
+function Home({ desfocado = false }) {
+  const desfoque = desfocado ? 'ob-anima ob-desfoca' : ''
   const items = useOpportunitiesStore((state) => state.items)
   const loading = useOpportunitiesStore((state) => state.loading)
   const fetchOpportunities = useOpportunitiesStore((state) => state.fetchOpportunities)
@@ -186,7 +189,7 @@ function Home() {
         </div>
       </BrandHeader>
 
-      <nav className="flex justify-center gap-10 px-4 pb-2 pt-5 lg:hidden" aria-label="Categorias">
+      <nav className={`flex justify-center gap-10 px-4 pb-2 pt-5 lg:hidden ${desfoque}`} aria-label="Categorias">
         {visiveisNoFeed.map(({ value, label, Icon }) => {
           const active = category === value
           return (
@@ -279,7 +282,7 @@ function Home() {
           )}
         </aside>
 
-        <main className="px-4 lg:min-w-0 lg:flex-1 lg:px-0">
+        <main className={`px-4 lg:min-w-0 lg:flex-1 lg:px-0 ${desfoque}`}>
           {!loading && visible.length > 0 && (
             <p className="pb-3 pt-4 text-xs text-ink/60 lg:pt-0" aria-live="polite">
               {visible.length} {visible.length === 1 ? 'oportunidade' : 'oportunidades'}

@@ -262,7 +262,8 @@ export function Solucao() {
         </div>
       </div>
 
-      <Botao to={caminho('equipe')} sombra seta>
+      {/* Avançando para a 04, ela abre com o título "Sobre você". */}
+      <Botao to={caminho('equipe')} state={{ abertura: true }} sombra seta>
         Montar o meu
       </Botao>
     </Tela>

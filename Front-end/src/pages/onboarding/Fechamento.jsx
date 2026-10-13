@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { salvarOnboarding } from '../../lib/salvarOnboarding.js'
 import { lembrarSessao, provedoresAtivos, supabase } from '../../lib/supabase.js'
@@ -16,6 +16,7 @@ import {
   reais,
   regiao,
 } from './fluxo.js'
+import { ConfirmarEmail } from './ConfirmarEmail.jsx'
 import { Botao, Check, Envelope, Etiqueta, Google, Grafico, Olho, Cadeado, Radar, Rotulo, SetaVoltar, Tela, Titulo, Xis } from './pecas.jsx'
 import { SAIDA, brilho, destaque } from './estilo.js'
 
@@ -153,95 +154,6 @@ function Campo({ id, label, Icone, className = 'mt-4', children, ...props }) {
         {children}
       </div>
     </>
-  )
-}
-
-const ESPERA_REENVIO = 60
-
-// Confirmação do e-mail por código (a mesma do cadastro, no visual da tela).
-function ConfirmarEmail({ email, onConfirmado, onVoltar }) {
-  const [codigo, setCodigo] = useState('')
-  const [enviando, setEnviando] = useState(false)
-  const [erro, setErro] = useState('')
-  const [aviso, setAviso] = useState('')
-  const [espera, setEspera] = useState(ESPERA_REENVIO)
-
-  useEffect(() => {
-    if (espera === 0) return
-    const timer = setTimeout(() => setEspera(espera - 1), 1000)
-    return () => clearTimeout(timer)
-  }, [espera])
-
-  async function confirmar(event) {
-    event.preventDefault()
-    setEnviando(true)
-    setErro('')
-    const { error } = await supabase.auth.verifyOtp({ email, token: codigo, type: 'email' })
-    setEnviando(false)
-    if (error) return setErro(mensagemErro(error))
-    onConfirmado()
-  }
-
-  async function reenviar() {
-    setErro('')
-    setAviso('')
-    setEspera(ESPERA_REENVIO)
-    const { error } = await supabase.auth.resend({ type: 'signup', email })
-    if (error) setErro(mensagemErro(error))
-    else setAviso('Enviamos um novo código.')
-  }
-
-  return (
-    <form onSubmit={confirmar} className="flex flex-1 flex-col">
-      <button type="button" onClick={onVoltar} aria-label="Voltar" className="-ml-3 flex h-11 w-11 items-center justify-center rounded-xl text-ink">
-        <SetaVoltar />
-      </button>
-      <Rotulo className="mt-4 text-ob-destaque">Falta pouco</Rotulo>
-      <Titulo className="mt-2.5">Confirme seu e-mail</Titulo>
-      <p className="mt-2.5 text-[15px] leading-[1.45] text-mute">
-        Enviamos um código para <strong className="break-all font-bold text-ink">{email}</strong>. Digite-o abaixo para ativar sua conta.
-      </p>
-
-      <label htmlFor="codigo" className="sr-only">
-        Código
-      </label>
-      <input
-        id="codigo"
-        value={codigo}
-        onChange={(event) => setCodigo(event.target.value.replace(/\D/g, '').slice(0, 10))}
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        placeholder="000000"
-        autoFocus
-        className="mt-6 h-[60px] rounded-xl border-[1.5px] border-line bg-surface-card text-center text-2xl font-bold tracking-[0.35em] text-ink outline-none placeholder:text-ink/25 focus:border-ob-destaque"
-      />
-
-      {erro && (
-        <p role="alert" className="mt-3 text-[13px] text-loss">
-          {erro}
-        </p>
-      )}
-      {aviso && (
-        <p role="status" className="mt-3 text-[13px] text-gain">
-          {aviso}
-        </p>
-      )}
-
-      <p className="mt-4 text-[13px] text-mute">
-        Não recebeu?{' '}
-        {espera > 0 ? (
-          <span>Reenvie em {espera}s</span>
-        ) : (
-          <button type="button" onClick={reenviar} className="font-bold text-ob-destaque underline underline-offset-2">
-            Reenviar código
-          </button>
-        )}
-      </p>
-
-      <Botao type="submit" disabled={enviando || codigo.length < 6}>
-        {enviando ? 'Confirmando…' : 'Confirmar'}
-      </Botao>
-    </form>
   )
 }
 

@@ -37,9 +37,11 @@ function Pilula({ atraso, ponto = false, titulo, texto, to }) {
           <br />
           {texto}
         </span>
+        {/* Com brilho em volta, pulsando: é para onde o olho tem que ir. */}
         <Link
           to={to}
-          className="flex h-11 shrink-0 items-center rounded-full bg-paper px-[18px] text-sm font-bold text-[#0f4c5c]"
+          className="ob-anima flex h-11 shrink-0 items-center rounded-full bg-paper px-[18px] text-sm font-bold text-[#0f4c5c] shadow-[0_0_18px_rgba(168,220,207,0.5)]"
+          style={{ animation: 'ob-halo 1.8s ease-out 1s infinite' }}
         >
           Continuar
         </Link>
@@ -55,7 +57,9 @@ export function Feed() {
 
   return (
     <>
-      <Home />
+      {/* Categorias e anúncios desfocados (o header fica nítido), para o olho
+          ir para a pílula. A página continua rolando. */}
+      <Home desfocado />
       <Pilula
         atraso=".6s"
         ponto
@@ -142,9 +146,10 @@ export function Alerta() {
   return (
     <>
       <Home />
+      {/* Tudo atrás escurecido e desfocado: só a notificação e a pílula ficam nítidas. */}
       <div
         aria-hidden="true"
-        className="ob-anima pointer-events-none fixed inset-0 z-40 bg-[rgba(14,22,24,0.34)]"
+        className="ob-anima pointer-events-none fixed inset-0 z-40 bg-[rgba(14,22,24,0.34)] backdrop-blur-[3px]"
         style={{ animation: 'ob-mostra .4s ease-out .4s both' }}
       />
       {item && (

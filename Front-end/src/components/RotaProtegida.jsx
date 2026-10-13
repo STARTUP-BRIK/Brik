@@ -22,7 +22,7 @@ function RotaProtegida() {
   if (carregando) return null
   if (!session) return <Navigate to="/boas-vindas" replace state={{ de: location.pathname }} />
   if (quizRespondido === null) return null
-  if (!quizRespondido) return <Navigate to="/onboarding/nome" replace />
+  if (!quizRespondido) return <Navigate to="/onboarding/tema" replace />
   return <Outlet />
 }
 

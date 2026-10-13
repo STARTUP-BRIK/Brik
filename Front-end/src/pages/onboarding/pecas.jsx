@@ -162,18 +162,28 @@ const ALTURA = 844
 // menos 390 × 844; menor, a tela inteira diminui por igual. A área desenhada
 // fica do tamanho da janela dividido pela escala, então nunca é menor que o
 // canvas e, depois de escalada, ocupa a janela exata.
+// Usa a área visível de verdade (visualViewport): com o teclado aberto no
+// celular, a tela diminui para caber acima dele, já que não dá para rolar.
 function useEncaixe() {
   const medir = () => {
-    const largura = window.innerWidth
-    const altura = window.innerHeight
+    const visivel = window.visualViewport
+    const largura = visivel?.width ?? window.innerWidth
+    const altura = visivel?.height ?? window.innerHeight
     const escala = Math.min(1, largura / LARGURA, altura / ALTURA)
-    return { escala, largura: largura / escala, altura: altura / escala }
+    return { escala, largura: largura / escala, altura: altura / escala, topo: visivel?.offsetTop ?? 0, visivel: altura }
   }
   const [encaixe, setEncaixe] = useState(medir)
   useEffect(() => {
     const atualizar = () => setEncaixe(medir())
+    const visivel = window.visualViewport
     window.addEventListener('resize', atualizar)
-    return () => window.removeEventListener('resize', atualizar)
+    visivel?.addEventListener('resize', atualizar)
+    visivel?.addEventListener('scroll', atualizar)
+    return () => {
+      window.removeEventListener('resize', atualizar)
+      visivel?.removeEventListener('resize', atualizar)
+      visivel?.removeEventListener('scroll', atualizar)
+    }
   }, [])
   return encaixe
 }
@@ -183,9 +193,9 @@ function useEncaixe() {
 // A tela é presa à janela (fixed) e não rola; o conteúdo fica numa coluna no
 // meio, que no celular ocupa a largura toda.
 export function Tela({ fundo, classeFundo, className = '', children }) {
-  const { escala, largura, altura } = useEncaixe()
+  const { escala, largura, altura, topo, visivel } = useEncaixe()
   return (
-    <div className="fixed inset-0 overflow-hidden">
+    <div className="fixed inset-x-0 overflow-hidden" style={{ top: topo, height: visivel }}>
       <div
         className={`origin-top-left transition-colors duration-[350ms] ${classeFundo ?? (fundo ? 'text-ink' : 'bg-surface text-ink')}`}
         style={{
@@ -216,6 +226,26 @@ export function Topo({ voltar, progresso }) {
         <div className="h-full rounded-full bg-ob-destaque" style={{ width: `${progresso}%` }} />
       </div>
     </div>
+  )
+}
+
+// Texto que aparece letra por letra, a partir de `inicio` (s), uma letra a cada
+// `passo` (s), para dar tempo de ler. Leitores de tela recebem a frase inteira.
+export function Letras({ texto, inicio, passo }) {
+  return (
+    <>
+      <span className="sr-only">{texto}</span>
+      {Array.from(texto).map((letra, i) => (
+        <span
+          key={i}
+          aria-hidden="true"
+          className="ob-anima"
+          style={{ animation: `ob-mostra .12s linear ${(inicio + i * passo).toFixed(3)}s both` }}
+        >
+          {letra}
+        </span>
+      ))}
+    </>
   )
 }
 

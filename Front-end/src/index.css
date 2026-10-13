@@ -813,6 +813,10 @@ body {
 @keyframes ob-enche-x { from { transform: scaleX(0); } }
 @keyframes ob-enche-y { from { transform: scaleY(0); } }
 
+/* 07 · os tracinhos que sobem de cada dia até o total da semana. 260 cobre o
+   traço mais longo (~200 no viewBox), que fica com o tracejado do mesmo tamanho. */
+@keyframes ob-traco { from { stroke-dashoffset: 260; } }
+
 /* 09 · o ponto do alerta pulsa */
 @keyframes ob-brilho {
   50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-ob-destaque) 18%, transparent); }
@@ -827,6 +831,20 @@ body {
 
 /* 15 a 18 · a pílula do onboarding, a notificação e a folha da permissão */
 @keyframes ob-pulsa { 50% { box-shadow: 0 0 0 6px rgba(168, 220, 207, 0.2); } }
+
+/* 15 · categorias e anúncios desfocados (o header fica nítido) */
+@keyframes ob-desfoca { from { filter: blur(0); } }
+.ob-desfoca {
+  filter: blur(2px);
+  animation: ob-desfoca 0.6s ease 0.6s both;
+}
+
+/* O botão da pílula: brilho verde-água em volta, com uma onda que sai dele. */
+@keyframes ob-halo {
+  0% { box-shadow: 0 0 0 0 rgba(168, 220, 207, 0.75), 0 0 18px rgba(168, 220, 207, 0.5); }
+  70% { box-shadow: 0 0 0 12px rgba(168, 220, 207, 0), 0 0 28px rgba(168, 220, 207, 0.7); }
+  100% { box-shadow: 0 0 0 0 rgba(168, 220, 207, 0), 0 0 18px rgba(168, 220, 207, 0.5); }
+}
 @keyframes ob-desce {
   0% { opacity: 0; transform: translateY(-130%); }
   70% { opacity: 1; transform: translateY(6px); }
