@@ -95,7 +95,7 @@ export function ConfirmarEmail({ email, onConfirmado, onVoltar, verde = false })
         autoComplete="one-time-code"
         placeholder="000000"
         autoFocus
-        className={`mt-6 h-[60px] rounded-xl text-center text-2xl font-bold tracking-[0.35em] outline-none ${c.campo}`}
+        className={`mt-6 h-[60px] rounded-xl text-center text-2xl font-bold tracking-[0.35em] outline-none ob-sem-contorno ${c.campo}`}
       />
 
       {erro && (

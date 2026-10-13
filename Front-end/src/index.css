@@ -857,6 +857,12 @@ body {
   100% { opacity: 1; transform: none; }
 }
 
+/* Campos cuja caixa já mostra o foco (borda ou anel): sem o contorno geral do
+   :focus-visible por dentro dela. Fora de @layer, como o :focus-visible. */
+.ob-sem-contorno:focus-visible {
+  outline: none;
+}
+
 /* Campos sobre o fundo verde (01a) e no tema da tela (19b). */
 .ob-campo-verde:focus-within {
   box-shadow: 0 0 0 2px #a8dccf, 0 4px 12px -6px rgba(0, 0, 0, 0.4);

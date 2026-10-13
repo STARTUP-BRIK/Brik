@@ -1,8 +1,11 @@
+import { useRef, useState } from 'react'
+import { buscarCep, mascaraCep } from '../../lib/cep.js'
+import { enderecoDaPosicao, posicaoAtual } from '../../lib/localizacao.js'
 import { aplicarRadar } from '../../lib/salvarOnboarding.js'
 import { useOnboardingStore } from '../../stores/useOnboardingStore.js'
 import {
   CATEGORIAS_ONB,
-  CIDADES_PE,
+  foraDePE,
   PROGRESSO,
   TEMPO_RESPOSTA,
   anterior,
@@ -13,7 +16,7 @@ import {
   reais,
   regiao,
 } from './fluxo.js'
-import { Botao, BotaoDesligado, Celular, Check, Controle, Etiqueta, Grafico, Lampada, Opcoes, Pino, Rotulo, Subtitulo, Tela, Titulo, Topo } from './pecas.jsx'
+import { Botao, BotaoDesligado, Celular, Check, Controle, Etiqueta, Grafico, Lampada, Mira, Opcoes, Pino, Rotulo, Subtitulo, Tela, Titulo, Topo } from './pecas.jsx'
 import { SAIDA, brilho, destaque } from './estilo.js'
 
 // 10 a 14: o que adapta o produto (categorias, defeito, raio, meta) e a
@@ -182,40 +185,131 @@ const QUADRAS = [-2, -1, 0, 1, 2].flatMap((i) => [-2, -1, 0, 1, 2].map((j) => [i
 // 15 km fica no tamanho do canvas); o círculo cresce pouco, para 1 km e 100 km
 // caberem no mesmo quadro.
 export function Raio() {
-  const cidade = useOnboardingStore((state) => state.cidade)
-  const raio = useOnboardingStore((state) => state.raio)
-  const responder = useOnboardingStore((state) => state.responder)
+  const r = useOnboardingStore()
+  const raio = r.raio
+  const responder = r.responder
   const diametro = Math.round(60 + 55 * Math.log10(raio))
   const zoom = Math.pow(15 / raio, 0.6)
+
+  // O ponto de partida vem do CEP, consultado assim que tem 8 dígitos
+  // (lib/cep.js), ou da localização do aparelho (lib/localizacao.js). `busca`:
+  // 'vazio', 'buscando', 'localizando', 'ok', 'nao-achou', 'erro',
+  // 'sem-permissao' ou 'sem-local'. Quem volta para cá já com um ponto começa
+  // em 'ok'. `pedido`: a consulta que vale (o CEP digitado ou 'local').
+  const [digitado, setDigitado] = useState(() => mascaraCep(r.cep))
+  const [busca, setBusca] = useState(r.cidade || r.lat != null ? 'ok' : 'vazio')
+  const pedido = useRef(r.cep)
+
+  async function usarLocalizacao() {
+    pedido.current = 'local'
+    setBusca('localizando')
+    try {
+      const posicao = await posicaoAtual()
+      const endereco = await enderecoDaPosicao(posicao)
+      if (pedido.current !== 'local') return
+      responder({ cep: '', ...posicao, ...endereco })
+      setDigitado('')
+      setBusca('ok')
+    } catch (erro) {
+      if (pedido.current !== 'local') return
+      pedido.current = ''
+      // code 1: a pessoa (ou o navegador) negou a permissão.
+      setBusca(erro?.code === 1 ? 'sem-permissao' : 'sem-local')
+    }
+  }
+
+  async function digitar(valor) {
+    const mascara = mascaraCep(valor)
+    setDigitado(mascara)
+    const digitos = mascara.replace(/\D/g, '')
+    if (digitos.length < 8) {
+      pedido.current = ''
+      setBusca('vazio')
+      return
+    }
+    if (digitos === pedido.current) return
+    pedido.current = digitos
+    setBusca('buscando')
+    try {
+      const achado = await buscarCep(digitos)
+      // Outro CEP foi digitado enquanto este era consultado.
+      if (pedido.current !== digitos) return
+      if (!achado) return setBusca('nao-achou')
+      responder(achado)
+      setBusca('ok')
+    } catch {
+      if (pedido.current === digitos) {
+        pedido.current = ''
+        setBusca('erro')
+      }
+    }
+  }
+
+  const situacao = {
+    vazio: <span className="text-mute">Os anúncios vão aparecer a partir daqui.</span>,
+    buscando: <span className="text-mute">Procurando o CEP…</span>,
+    'nao-achou': <span className="text-loss">Não achamos esse CEP. Confira os números.</span>,
+    erro: <span className="text-loss">Não deu para consultar o CEP agora. Tente de novo.</span>,
+    localizando: <span className="text-mute">Pegando sua localização…</span>,
+    'sem-permissao': <span className="text-loss">Sem permissão para a localização. Digite o CEP.</span>,
+    'sem-local': <span className="text-loss">Não deu para pegar sua localização. Digite o CEP.</span>,
+    ok: (
+      <span className="flex items-center gap-1.5 text-ink">
+        <Check largura={3} width="14" height="14" className="shrink-0 text-ob-destaque" />
+        <span className="truncate">
+          {[r.bairro, r.cidade].filter(Boolean).join(', ') || 'Sua localização'}
+          {r.cidade && r.uf && ` - ${r.uf}`}
+          {!r.cep && r.cidade && <span className="text-mute"> · sua localização</span>}
+        </span>
+      </span>
+    ),
+  }[busca]
 
   return (
     <Pergunta passo="raio">
       <Rotulo>Seu radar · 3 de 3</Rotulo>
       <Titulo>Até onde você vai para buscar um aparelho?</Titulo>
 
-      {/* O select nativo cobre a linha inteira: no celular abre a roleta do sistema. */}
-      <label className="relative mt-5 flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-[14px] border-[1.5px] border-line bg-surface-card px-3.5 py-2.5 text-left text-ink focus-within:border-ob-destaque">
-        <Pino width="20" height="20" className="shrink-0 text-ob-destaque" />
-        <span className="flex flex-1 flex-col gap-px">
-          <span className="text-xs text-mute">Buscar a partir de</span>
-          <span className="text-[15px] font-medium">{cidade}, PE</span>
-        </span>
-        <span aria-hidden="true" className="text-sm font-bold text-ob-destaque">
-          Alterar
-        </span>
-        <select
-          aria-label="Buscar a partir de"
-          value={cidade}
-          onChange={(event) => responder({ cidade: event.target.value })}
-          className="absolute inset-0 cursor-pointer opacity-0"
+      <div className="mt-5 flex items-center justify-between gap-3">
+        <label htmlFor="cep" className="text-[13px] font-bold text-ink">
+          Seu CEP
+        </label>
+        {/* -my-3: a área de toque fica com 44 px sem afastar o campo. */}
+        <button
+          type="button"
+          onClick={usarLocalizacao}
+          disabled={busca === 'localizando'}
+          className="-my-3 flex items-center gap-1.5 py-3 text-[13px] font-bold text-ob-destaque disabled:opacity-60"
         >
-          {CIDADES_PE.map((c) => (
-            <option key={c.nome} value={c.nome}>
-              {c.nome}
-            </option>
-          ))}
-        </select>
-      </label>
+          <Mira />
+          Usar minha localização
+        </button>
+      </div>
+      <div className="mt-2 flex h-14 items-center gap-3 rounded-[14px] border-[1.5px] border-line bg-surface-card px-3.5 focus-within:border-ob-destaque">
+        <Pino width="20" height="20" className="shrink-0 text-ob-destaque" />
+        <input
+          id="cep"
+          inputMode="numeric"
+          autoComplete="postal-code"
+          placeholder="00000-000"
+          aria-describedby="cep-situacao"
+          value={digitado}
+          onChange={(event) => digitar(event.target.value)}
+          className="min-w-0 flex-1 border-0 bg-transparent text-[17px] font-medium tracking-wide text-ink outline-none ob-sem-contorno placeholder:font-normal placeholder:text-mute/70"
+        />
+        {(busca === 'buscando' || busca === 'localizando') && (
+          <span
+            aria-hidden="true"
+            className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-mute border-t-transparent motion-reduce:animate-none"
+          />
+        )}
+      </div>
+      <p id="cep-situacao" aria-live="polite" className="mt-1.5 min-h-[18px] text-[13px] leading-[18px]">
+        {situacao}
+      </p>
+      {busca === 'ok' && foraDePE(r) && (
+        <p className="mt-1 text-[12.5px] leading-[1.45] text-mute">Por enquanto o Brik busca anúncios só em Pernambuco.</p>
+      )}
 
       <div
         aria-hidden="true"
@@ -303,7 +397,11 @@ export function Raio() {
         ))}
       </div>
 
-      <Botao to={proximo('raio', {})}>Continuar com {raio} km</Botao>
+      {busca === 'ok' ? (
+        <Botao to={proximo('raio', {})}>Continuar com {raio} km</Botao>
+      ) : (
+        <BotaoDesligado>Informe seu CEP ou localização</BotaoDesligado>
+      )}
     </Pergunta>
   )
 }
@@ -337,7 +435,7 @@ export function Meta() {
             const digitos = event.target.value.replace(/\D/g, '').slice(0, 7)
             responder({ meta: digitos ? Number(digitos) : 0 })
           }}
-          className="min-w-0 flex-1 border-0 bg-transparent text-[34px] font-bold tracking-[-0.02em] text-ob-titulo outline-none"
+          className="min-w-0 flex-1 border-0 bg-transparent text-[34px] font-bold tracking-[-0.02em] text-ob-titulo outline-none ob-sem-contorno"
         />
       </div>
 

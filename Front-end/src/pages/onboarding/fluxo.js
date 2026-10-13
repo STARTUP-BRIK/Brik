@@ -157,8 +157,8 @@ export function juntar(itens) {
 // --- Cidades do raio ---------------------------------------------------------------
 
 // Por ora só Pernambuco: é onde o scraper coleta os anúncios. Coordenadas do
-// centro de cada cidade, para saber quais cabem no raio da 12. `curto`: como o
-// nome aparece nas frases.
+// centro de cada cidade, para saber quais cabem no raio da 12 a partir do ponto
+// do CEP. `curto`: como o nome aparece nas frases.
 export const CIDADES_PE = [
   { nome: 'Abreu e Lima', lat: -7.9007, lng: -34.8984 },
   { nome: 'Cabo de Santo Agostinho', curto: 'Cabo', lat: -8.2822, lng: -35.0253 },
@@ -188,18 +188,28 @@ function distanciaKm(a, b) {
   return 2 * 6371 * Math.asin(Math.sqrt(h))
 }
 
-// Cidades dentro do raio, da mais perto para a mais longe (a de partida primeiro).
+// Cidades no raio, medido a partir do ponto do CEP (sem ponto, do centro da
+// cidade dele): a da pessoa primeiro, depois as outras de Pernambuco cujo
+// centro cabe no raio, da mais perto para a mais longe.
 export function cidadesNoRaio(r) {
-  const origem = CIDADES_PE.find((c) => c.nome === r.cidade) ?? CIDADES_PE.find((c) => c.nome === 'Recife')
-  return CIDADES_PE.map((c) => ({ ...c, km: distanciaKm(origem, c) }))
+  const propria = CIDADES_PE.find((c) => c.nome === r.cidade)
+  const origem = r.lat != null ? { lat: r.lat, lng: r.lng } : (propria ?? CIDADES_PE.find((c) => c.nome === 'Recife'))
+  const outras = CIDADES_PE.filter((c) => c !== propria)
+    .map((c) => ({ ...c, km: distanciaKm(origem, c) }))
     .filter((c) => c.km <= r.raio)
     .sort((a, b) => a.km - b.km)
     .map((c) => c.curto ?? c.nome)
+  const nome = propria ? (propria.curto ?? propria.nome) : r.cidade
+  return nome ? [nome, ...outras] : outras
 }
+
+// CEP fora de Pernambuco: por ora o Brik só busca anúncios lá.
+export const foraDePE = (r) => Boolean(r.uf) && r.uf !== 'PE'
 
 // "Recife, Olinda e Jaboatão"; com mais de três, "Recife, Olinda, Paulista e mais 2".
 export function regiao(r) {
   const cidades = cidadesNoRaio(r)
+  if (!cidades.length) return 'sua região'
   if (cidades.length <= 3) return juntar(cidades)
   return `${cidades.slice(0, 3).join(', ')} e mais ${cidades.length - 3}`
 }

@@ -148,7 +148,7 @@ function Campo({ id, label, Icone, className = 'mt-4', children, ...props }) {
         <Icone className="shrink-0 text-ob-destaque" />
         <input
           id={id}
-          className="min-w-0 flex-1 border-0 bg-transparent text-base text-ink outline-none placeholder:text-mute"
+          className="min-w-0 flex-1 border-0 bg-transparent text-base text-ink outline-none ob-sem-contorno placeholder:text-mute"
           {...props}
         />
         {children}
