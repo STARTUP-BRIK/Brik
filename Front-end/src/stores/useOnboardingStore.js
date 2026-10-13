@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-// Respostas do onboarding (pages/onboarding). Ele acontece antes de existir
-// conta, então tudo fica no localStorage até a pessoa criar a conta (tela 19b);
+// Respostas do onboarding (pages/onboarding). A conta é criada logo no começo
+// (01a), mas as respostas ficam no localStorage até a escolha de plano (20);
 // aí lib/salvarOnboarding.js leva para o banco. Os valores iniciais são as
 // opções que o canvas do onboarding já traz marcadas.
 export const RESPOSTAS_PADRAO = {
@@ -17,6 +17,9 @@ export const RESPOSTAS_PADRAO = {
   tempoResposta: 'quando',
   // 10
   categorias: ['iphone', 'videogame_console'],
+  // 10b: de quais modelos quer ser avisada (ids de config/modelos.js). Por ora
+  // fica só no aparelho, não vai para o banco.
+  modelos: [],
   // 11: 'sim' (eu conserto) | 'alguem' (alguém da equipe conserta) | 'nao'
   defeito: 'sim',
   // 11: em quais das categorias da 10 aceita aparelho com defeito
@@ -24,8 +27,11 @@ export const RESPOSTAS_PADRAO = {
   // 12: o CEP de onde a pessoa sai, o que ele dá (ponto, bairro, cidade e UF,
   // ver lib/cep.js) e o raio em km que ela topa andar.
   cep: '',
+  // 'cep' (digitado) ou 'local' (localização do aparelho, com o CEP achado por ela)
+  origem: '',
   lat: null,
   lng: null,
+  rua: '',
   bairro: '',
   cidade: '',
   uf: '',

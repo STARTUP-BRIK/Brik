@@ -94,7 +94,9 @@ meses = {
 
 def normalizar_data(texto: str) -> str:
     texto = texto.strip()
-    hoje = datetime.date.today()
+    # "Hoje" no OLX é o dia em Brasília (UTC-3, sem horário de verão); a máquina
+    # do GitHub Actions está em UTC e, das 21h à meia-noite, já estaria no dia seguinte.
+    hoje = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))).date()
     if 'Hoje' in texto:
         return texto.replace('Hoje', hoje.strftime('%d/%m'))
     if 'Ontem' in texto:

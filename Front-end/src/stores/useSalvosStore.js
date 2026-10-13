@@ -22,6 +22,7 @@ const CAMPOS_DO_RETRATO = [
   'image_url',
   'defeito',
   'first_seen_at',
+  'postado_em',
 ]
 
 const retrato = (item) => Object.fromEntries(CAMPOS_DO_RETRATO.map((campo) => [campo, item[campo] ?? null]))

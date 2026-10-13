@@ -303,6 +303,26 @@ function normalizeUrl(url) {
     }
 }
 
+// Data em que o anúncio foi postado no OLX, a partir do campo Data do app.py
+// ("13/10, 14:32": o scraper já troca "Hoje"/"Ontem"/"13 de out" por dd/mm, na
+// hora de Brasília). O texto não traz o ano: vale o ano atual, ou o anterior se
+// a data cairia no futuro (anúncio de dezembro visto em janeiro). Sem hora, meia-
+// noite. Devolve ISO em UTC, ou null se o texto não tem data.
+const BRASILIA_MS = -3 * 60 * 60 * 1000; // UTC-3, sem horário de verão desde 2019
+
+function postadoEmDoOlx(texto, agora = new Date()) {
+    const m = /(\d{1,2})\/(\d{1,2})(?:\D+(\d{1,2}):(\d{2}))?/.exec(texto || '');
+    if (!m) return null;
+    const [dia, mes, hora, minuto] = [m[1], m[2], m[3] || 0, m[4] || 0].map(Number);
+    if (mes < 1 || mes > 12 || dia < 1 || dia > 31 || hora > 23 || minuto > 59) return null;
+
+    const anoBrasilia = new Date(agora.getTime() + BRASILIA_MS).getUTCFullYear();
+    const emUtc = (ano) => new Date(Date.UTC(ano, mes - 1, dia, hora, minuto) - BRASILIA_MS);
+    let data = emUtc(anoBrasilia);
+    if (data.getTime() > agora.getTime() + 24 * 60 * 60 * 1000) data = emUtc(anoBrasilia - 1);
+    return Number.isNaN(data.getTime()) ? null : data.toISOString();
+}
+
 // ------------------------------------------------------------------
 // Passo 2 — Validar o JSON do scraper (array não vazio + campos
 // obrigatórios) e mapear os campos do app.py (Titulo, Preco, Local,
@@ -362,6 +382,7 @@ function mapAndValidateScraperOutput(payload) {
             url,
             price,
             location: raw.Local || null,
+            postadoEm: postadoEmDoOlx(raw.Data),
             imageUrl: bestImageFromSrcset(raw.Imagem),
             defeito_titulo: Boolean(defeito),
         });
@@ -786,7 +807,7 @@ async function selectExistingPrices(urls, chunkSize = 40) {
         const chunk = urls.slice(i, i + chunkSize);
         const { data, error } = await supabase
             .from('anuncios_ativos')
-            .select('url, price, last_price_change_at, variant, condition, defeito')
+            .select('url, price, last_price_change_at, variant, condition, defeito, postado_em')
             .in('url', chunk);
 
         if (error) throw new Error(`Erro ao consultar preços existentes em anuncios_ativos: ${error.message}`);
@@ -908,6 +929,9 @@ async function processValidItems(validItems, category, mediaMap) {
             // lote: novo valor se é novo/mudou de preço, senão preserva
             // o que já estava salvo (senão o Supabase grava NULL).
             last_price_change_at: (isNew || priceChanged) ? nowIso : existing.last_price_change_at,
+            // Data da postagem no OLX. Sem data nesta raspagem, mantém a salva
+            // (o upsert em lote gravaria NULL por cima).
+            postado_em: item.postadoEm ?? (existing ? existing.postado_em : null) ?? null,
         };
 
         if (historico.insert) {

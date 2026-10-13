@@ -101,39 +101,53 @@ function useOportunidade() {
   )
 }
 
-// Notificação do Brik (componente do app, não do sistema), com um anúncio real.
-function Notificacao({ item, como: Como = 'div', className = '', ...props }) {
-  const selo = SELO[item.opportunity_level] ?? SELO.boa
-  const cidade = cidadeDe(item) ?? item.location_city
+// Notificação do Brik (componente do app, não do sistema), com um anúncio real,
+// presa no topo da tela.
+function Notificacao(props) {
   return (
     <div className="pointer-events-none fixed inset-x-0 top-2.5 z-50 flex justify-center px-2.5">
-      <Como
-        className={`pointer-events-auto flex w-full max-w-md gap-3 rounded-[22px] bg-white/97 p-3.5 text-ink shadow-[0_20px_44px_-14px_rgba(14,22,24,0.6),0_0_0_1px_rgba(43,43,43,0.06)] dark:bg-[rgba(21,33,36,0.97)] dark:shadow-[0_20px_44px_-14px_rgba(14,22,24,0.6),0_0_0_1px_rgba(230,235,234,0.08)] ${className}`}
-        {...props}
-      >
-        <span aria-hidden="true" className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[11px] bg-[#0f4c5c]">
-          <span className="block h-[26px] w-5 overflow-hidden">
-            <img src="/logoBrik.png" alt="" className="block h-[26px] w-auto max-w-none" />
-          </span>
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
-          <span className="flex justify-between text-xs leading-4 text-ink/60">
-            <span>
-              <strong className="font-bold text-ink">Brik</strong> · Radar
-            </span>
-            <span>agora</span>
-          </span>
-          <span className="flex items-center gap-1.5 text-sm font-bold leading-5">
-            <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-normal ${selo.classe}`}>{selo.rotulo}</span>
-            {cidade && <span className="truncate">em {cidade}</span>}
-          </span>
-          <span className="line-clamp-3 text-[13px] leading-[18px]">
-            {item.title} por <strong className="font-bold">{brl(item.price)}</strong>. Média da região {brl(item.market_price)}:{' '}
-            <strong className="font-bold text-gain">+{brl(item.market_price - item.price)} de lucro</strong>.
-          </span>
-        </span>
-      </Como>
+      <CartaoNotificacao {...props} />
     </div>
+  )
+}
+
+// O cartão da notificação, solto (a 10b mostra um de exemplo no meio da tela).
+// `item` no formato dos anúncios: title, price, market_price, opportunity_level.
+// `suave`: sombra leve, para o cartão no meio da tela (a forte é para destacar
+// a notificação por cima do feed).
+export function CartaoNotificacao({ item, como: Como = 'div', suave = false, className = '', ...props }) {
+  const selo = SELO[item.opportunity_level] ?? SELO.boa
+  const cidade = cidadeDe(item) ?? item.location_city
+  const sombra = suave
+    ? 'shadow-[0_6px_18px_-10px_rgba(14,22,24,0.25),0_0_0_1px_rgba(43,43,43,0.06)] dark:shadow-[0_6px_18px_-10px_rgba(0,0,0,0.4),0_0_0_1px_rgba(230,235,234,0.08)]'
+    : 'shadow-[0_20px_44px_-14px_rgba(14,22,24,0.6),0_0_0_1px_rgba(43,43,43,0.06)] dark:shadow-[0_20px_44px_-14px_rgba(14,22,24,0.6),0_0_0_1px_rgba(230,235,234,0.08)]'
+  return (
+    <Como
+      className={`pointer-events-auto flex w-full max-w-md gap-3 rounded-[22px] bg-white/97 p-3.5 text-ink dark:bg-[rgba(21,33,36,0.97)] ${sombra} ${className}`}
+      {...props}
+    >
+      <span aria-hidden="true" className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[11px] bg-[#0f4c5c]">
+        <span className="block h-[26px] w-5 overflow-hidden">
+          <img src="/logoBrik.png" alt="" className="block h-[26px] w-auto max-w-none" />
+        </span>
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
+        <span className="flex justify-between text-xs leading-4 text-ink/60">
+          <span>
+            <strong className="font-bold text-ink">Brik</strong> · Radar
+          </span>
+          <span>agora</span>
+        </span>
+        <span className="flex items-center gap-1.5 text-sm font-bold leading-5">
+          <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-normal ${selo.classe}`}>{selo.rotulo}</span>
+          {cidade && <span className="truncate">em {cidade}</span>}
+        </span>
+        <span className="line-clamp-3 text-[13px] leading-[18px]">
+          {item.title} por <strong className="font-bold">{brl(item.price)}</strong>. Média da região {brl(item.market_price)}:{' '}
+          <strong className="font-bold text-gain">+{brl(item.market_price - item.price)} de lucro</strong>.
+        </span>
+      </span>
+    </Como>
   )
 }
 

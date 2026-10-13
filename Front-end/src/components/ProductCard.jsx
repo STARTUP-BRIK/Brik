@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore.js'
 import { useSalvosStore } from '../stores/useSalvosStore.js'
-import { GamepadIcon, PhoneIcon, PinIcon, StarIcon, WarningIcon } from './icons.jsx'
+import { dataDoAnuncio, textoDaPostagem } from '../lib/postagem.js'
+import { CalendarIcon, GamepadIcon, PhoneIcon, PinIcon, StarIcon, WarningIcon } from './icons.jsx'
 
 // Card de oferta do feed (e dos Salvos). Na foto, o quanto está abaixo da média
 // e a estrela; embaixo, título, selo, local, média, valor e o lucro com o ícone
@@ -74,6 +75,9 @@ function ProductCard({ item, vendido = false }) {
   const FallbackIcon = CATEGORY_ICONS[item.category] ?? PhoneIcon
   // location_neighborhood já vem como "Cidade, Bairro"; location_city é fixo no worker.
   const location = item.location_neighborhood || item.location_city
+  // Quando foi postado ("Postado hoje, 14:32"); com o mouse em cima, data e hora.
+  const postagem = textoDaPostagem(item)
+  const postagemCompleta = postagem ? new Date(dataDoAnuncio(item)).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' }) : undefined
   const hasMarket = item.market_price != null
   const profit = hasMarket ? item.market_price - item.price : null
   // Quanto o preço está abaixo da média (desconto sobre a média, não o lucro %).
@@ -148,6 +152,13 @@ function ProductCard({ item, vendido = false }) {
             <p className="flex items-center gap-1 text-[11px] text-ink/55 lg:text-xs">
               <PinIcon className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">{location}</span>
+            </p>
+          )}
+
+          {postagem && (
+            <p className="flex items-center gap-1 text-[11px] text-ink/55 lg:text-xs" title={postagemCompleta}>
+              <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{postagem}</span>
             </p>
           )}
 

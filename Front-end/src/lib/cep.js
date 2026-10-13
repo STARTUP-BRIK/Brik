@@ -5,7 +5,7 @@
 // então nunca é usada para contestar um "não encontrado" da AwesomeAPI.
 // As duas são públicas (sem chave) e aceitam chamada do navegador.
 //
-// Devolve { cep, lat, lng, bairro, cidade, uf }, ou null se o CEP não existe.
+// Devolve { cep, lat, lng, rua, bairro, cidade, uf }, ou null se o CEP não existe.
 // Lança erro quando nenhuma das duas respondeu.
 
 const numero = (valor) => (valor == null || valor === '' ? null : Number(valor))
@@ -18,7 +18,15 @@ export async function buscarCep(cep) {
     if (resposta.status === 404 || resposta.status === 400) return null
     if (resposta.ok) {
       const d = await resposta.json()
-      return { cep: digitos, lat: numero(d.lat), lng: numero(d.lng), bairro: d.district ?? '', cidade: d.city ?? '', uf: d.state ?? '' }
+      return {
+        cep: digitos,
+        lat: numero(d.lat),
+        lng: numero(d.lng),
+        rua: d.address ?? '',
+        bairro: d.district ?? '',
+        cidade: d.city ?? '',
+        uf: d.state ?? '',
+      }
     }
   } catch {
     // Sem rede ou fora do ar: tenta a reserva.
@@ -33,6 +41,7 @@ export async function buscarCep(cep) {
     cep: digitos,
     lat: numero(ponto?.latitude),
     lng: numero(ponto?.longitude),
+    rua: d.street ?? '',
     bairro: d.neighborhood ?? '',
     cidade: d.city ?? '',
     uf: d.state ?? '',

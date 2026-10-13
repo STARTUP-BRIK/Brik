@@ -7,7 +7,7 @@ import { Botao, SetaVoltar } from './pecas.jsx'
 const ESPERA_REENVIO = 60
 
 // Cores das duas versões: `verde` é a do cadastro (01a, sobre o fundo do login);
-// a outra segue o tema da tela (a conta da 19b).
+// a outra segue o tema da tela (sem uso desde que a conta saiu do fim do onboarding).
 const CORES = {
   verde: {
     voltar: 'text-paper',

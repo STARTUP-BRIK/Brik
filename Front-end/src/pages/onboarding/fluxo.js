@@ -2,6 +2,8 @@
 // resposta) e os textos que repetem as respostas da pessoa. As telas ficam em
 // /onboarding/:passo; a de boas-vindas (01) é /boas-vindas.
 
+import { idsDaCategoria } from '../../config/modelos.js'
+
 export const BOAS_VINDAS = '/boas-vindas'
 export const caminho = (passo) => `/onboarding/${passo}`
 
@@ -13,8 +15,9 @@ export const PROGRESSO = {
   diagnostico: 35,
   resposta: 41,
   'primeira-proposta': 47,
-  categorias: 53,
-  defeito: 59,
+  categorias: 52,
+  modelos: 56,
+  defeito: 60,
   raio: 65,
   meta: 71,
 }
@@ -58,8 +61,8 @@ export const muitoTempo = (r) => r.tempoBusca === 'h2' || r.tempoBusca === 'h3'
 
 // --- Para onde cada tela leva --------------------------------------------------
 
-// `logado`: com conta, a 19 pula a criação de conta (19b) e vai para os planos.
-export function proximo(passo, r, { logado = false } = {}) {
+// A conta é criada na 01a (nome): todas as telas seguintes pedem sessão.
+export function proximo(passo, r) {
   const seguinte = {
     nome: 'tema',
     tema: 'rolagem',
@@ -72,7 +75,8 @@ export function proximo(passo, r, { logado = false } = {}) {
     diagnostico: 'resposta',
     resposta: 'primeira-proposta',
     'primeira-proposta': 'categorias',
-    categorias: 'defeito',
+    categorias: 'modelos',
+    modelos: 'defeito',
     defeito: 'raio',
     raio: 'meta',
     meta: 'montagem',
@@ -81,8 +85,7 @@ export function proximo(passo, r, { logado = false } = {}) {
     alerta: 'alertas',
     alertas: 'dashboard',
     dashboard: 'plano',
-    plano: logado ? 'planos' : 'conta',
-    conta: 'planos',
+    plano: 'planos',
   }[passo]
   return seguinte ? caminho(seguinte) : '/'
 }
@@ -98,10 +101,10 @@ export function anterior(passo, r) {
     resposta: caminho('diagnostico'),
     'primeira-proposta': caminho('resposta'),
     categorias: caminho('primeira-proposta'),
-    defeito: caminho('categorias'),
+    modelos: caminho('categorias'),
+    defeito: caminho('modelos'),
     raio: caminho('defeito'),
     meta: caminho('raio'),
-    conta: caminho('plano'),
   }
   return volta[passo] ?? null
 }
@@ -138,6 +141,12 @@ export function listaCategorias(categorias, { maiuscula = false, singular = fals
 export function consertaValido(r) {
   if (r.defeito === 'nao') return []
   return r.conserta.filter((c) => r.categorias.includes(c))
+}
+
+// Modelos marcados na 10b que são das categorias marcadas na 10.
+export function modelosValidos(r) {
+  const validos = new Set(r.categorias.flatMap(idsDaCategoria))
+  return r.modelos.filter((m) => validos.has(m))
 }
 
 // Defeito em parte das categorias: "só iPhone"; em todas: "iPhones e videogames".
