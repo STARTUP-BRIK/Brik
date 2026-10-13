@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import { PLANOS } from '../../config/planos.js'
 import { salvarOnboarding } from '../../lib/salvarOnboarding.js'
 import { useAuthStore } from '../../stores/useAuthStore.js'
 import { useOnboardingStore } from '../../stores/useOnboardingStore.js'
@@ -9,6 +10,11 @@ import { SAIDA, brilho, destaque } from './estilo.js'
 
 // 19 e 20: o plano de brique com as respostas dele e a escolha de plano, que
 // conclui o onboarding. (A conta já foi criada na 01a.)
+
+// Preço mensal do Pro (config/planos.js, o mesmo da página /planos).
+const PRECO_PRO = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+  PLANOS.find((p) => p.value === 'pro').preco.mensal,
+)
 
 const Forte = ({ children }) => <strong className="font-bold text-ob-titulo">{children}</strong>
 
@@ -170,7 +176,7 @@ export function Planos() {
   const pro = r.plano === 'pro'
 
   // Sem conta (aberto direto pelo endereço): volta para a criação da conta.
-  if (!carregando && !session) return <Navigate to={caminho('nome')} replace />
+  if (!carregando && !session) return <Navigate to={caminho('cadastro')} replace />
 
   async function comecar() {
     setSalvando(true)
@@ -200,7 +206,7 @@ export function Planos() {
             <span className="rounded-full bg-ob-destaque/14 px-2 py-[3px] text-xs font-medium text-ob-destaque">Radar + Dashboard</span>
           </span>
           <span className="mt-2.5 flex items-baseline gap-1">
-            <span className="text-[28px] font-bold tracking-[-0.02em] text-ob-titulo">[PREÇO]</span>
+            <span className="text-[28px] font-bold tracking-[-0.02em] text-ob-titulo">{PRECO_PRO}</span>
             <span className="text-sm text-mute">/mês</span>
           </span>
           <span className="mt-3.5 flex flex-col gap-2 text-sm leading-[1.35]">

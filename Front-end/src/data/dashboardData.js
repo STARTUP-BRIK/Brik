@@ -79,8 +79,9 @@ export const dashboardExemplo = () => ({
   giroMedio: { dias: 9.4, deltaDias: -1.8, barras: [7, 12, 10, 16, 9, 6, 4], destaque: 3 },
   investimentoRetorno: { investido: 24500, retornado: 36430, roi: 48.7 },
   mes: {
-    nome: 'Setembro',
-    anterior: 'ago',
+    // O mês atual, como nos dados reais (a meta do mês aparece com este nome).
+    nome: monthName(),
+    anterior: previousMonthShort(),
     lucro: 5320,
     lucroVar: 18.2,
     vendidos: 14,

@@ -11,7 +11,7 @@ import { caminho } from './fluxo.js'
 
 // Onboarding (o desenho está no canvas "Onboarding Brik"). Substitui o quiz:
 // começa nas boas-vindas (/boas-vindas), onde a pessoa entra ou vai para a
-// criação da conta (01a, /onboarding/nome). Sem conta, nenhuma outra tela abre:
+// criação da conta (01a, /onboarding/cadastro). Sem conta, nenhuma outra tela abre:
 // todas voltam para a 01a. As respostas ficam no aparelho até os planos (20),
 // que as levam para a conta. Uma rota por tela, /onboarding/:passo, para o
 // voltar do navegador funcionar.
@@ -52,12 +52,12 @@ function Onboarding() {
     window.scrollTo(0, 0)
   }, [passo])
 
-  if (!TelaAtual) return <Navigate to={caminho('nome')} replace />
+  if (!TelaAtual) return <Navigate to={caminho('cadastro')} replace />
   // Só a criação da conta abre sem sessão. Enquanto a sessão guardada é lida
   // (inclusive na volta do login com Google), não mostra nada.
-  if (passo !== 'nome') {
+  if (passo !== 'cadastro') {
     if (carregando) return null
-    if (!session) return <Navigate to={caminho('nome')} replace />
+    if (!session) return <Navigate to={caminho('cadastro')} replace />
   }
   // A key remonta a tela a cada passo: as animações de entrada rodam de novo.
   return <TelaAtual key={passo} />

@@ -1,0 +1,200 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import BrandHeader from '../components/BrandHeader.jsx'
+import { FotoPerfil } from '../components/conta.jsx'
+import { StarIcon } from '../components/icons.jsx'
+import { PLANOS } from '../config/planos.js'
+import { fotoDaConta, usePerfil } from '../lib/conta.js'
+import { usePreferenciasStore } from '../stores/usePreferenciasStore.js'
+
+// Escolha de plano: Free, Intermedium (cobrança semanal) e Pro, com a chave
+// mensal/anual. O Pro fica em destaque, no centro. O plano em que a pessoa está
+// leva a foto dela (ou o ícone de usuário) no canto. O pagamento ainda não está
+// ligado: os botões de assinar avisam isso em vez de fingir uma cobrança.
+
+const reais = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })
+
+const Check = ({ className = '' }) => (
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
+    <path d="m3.5 8.3 2.9 2.9 6.1-6.4" />
+  </svg>
+)
+
+const Xis = ({ className = '' }) => (
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" className={className}>
+    <path d="m4.5 4.5 7 7m0-7-7 7" />
+  </svg>
+)
+
+// Chave Mensal / Anual.
+function Cobranca({ anual, onChange }) {
+  return (
+    <div role="radiogroup" aria-label="Cobrança" className="mx-auto grid w-full max-w-xs grid-cols-2 gap-1 rounded-full bg-surface-raise p-1">
+      {[
+        { valor: false, label: 'Mensal' },
+        { valor: true, label: 'Anual' },
+      ].map(({ valor, label }) => {
+        const on = anual === valor
+        return (
+          <button
+            key={label}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(valor)}
+            className={`h-10 rounded-full text-sm font-bold transition-colors ${on ? 'bg-brik text-paper shadow-sm' : 'text-ink/60 hover:text-ink'}`}
+          >
+            {label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// Bolinha com a foto da pessoa no cartão do plano atual.
+function SeuPlano({ foto }) {
+  return (
+    <span className="absolute -top-4 left-5 flex items-center gap-2">
+      <FotoPerfil src={foto} alt="" className="h-9 w-9 ring-4 ring-surface" iconClassName="h-5 w-5" />
+      <span className="rounded-full bg-ink px-2.5 py-1 text-[11px] font-bold text-surface shadow-sm">Seu plano</span>
+    </span>
+  )
+}
+
+function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher }) {
+  const valor = anual ? plano.preco.anual : plano.preco.mensal
+  const periodo = anual ? 'ano' : plano.periodo
+  const gratis = valor === 0
+  const definido = valor != null
+
+  return (
+    <article
+      aria-labelledby={`plano-${plano.value}`}
+      className={`ob-anima relative flex flex-col rounded-3xl bg-surface-card p-6 ${
+        plano.popular
+          ? 'shadow-[0_24px_48px_-24px_rgba(15,76,92,0.55)] ring-2 ring-brik lg:-translate-y-3'
+          : 'ring-1 ring-line'
+      }`}
+      style={{ animation: `ob-sobe-20 .6s cubic-bezier(.22,1,.36,1) ${0.1 + indice * 0.12}s both` }}
+    >
+      {atual && <SeuPlano foto={foto} />}
+      {plano.popular && (
+        <span className="absolute right-0 top-0 flex items-center gap-1 rounded-bl-2xl rounded-tr-3xl bg-brik px-3 py-1 text-xs font-bold text-paper">
+          <StarIcon className="h-3.5 w-3.5" />
+          Mais popular
+        </span>
+      )}
+
+      <h2 id={`plano-${plano.value}`} className={`${atual ? 'mt-3' : ''} text-sm font-bold uppercase tracking-[0.14em] text-ink/55`}>
+        {plano.nome}
+      </h2>
+      <p className="mt-1 text-sm text-ink/70">{plano.resumo}</p>
+
+      <p className="mt-5 flex items-baseline gap-1.5">
+        {/* key: o preço entra de novo ao trocar mensal/anual. */}
+        <span key={`${anual}`} className="ob-anima text-[40px] font-bold leading-none tracking-tight text-ink" style={{ animation: 'ob-sobe-8 .3s ease-out both' }}>
+          {definido ? (gratis ? 'R$ 0' : reais.format(valor)) : 'A definir'}
+        </span>
+        {definido && !gratis && <span className="text-sm font-medium text-ink/55">/ {periodo}</span>}
+      </p>
+      <p className="mt-1.5 min-h-4 text-xs text-ink/50">
+        {gratis
+          ? 'Para sempre, sem cartão'
+          : definido
+            ? `Cobrado por ${periodo}`
+            : `Cobrança ${anual ? 'anual' : plano.periodo === 'semana' ? 'semanal' : 'mensal'}, valor em breve`}
+      </p>
+
+      <ul className="mt-5 flex flex-col gap-2.5 text-sm">
+        {plano.vantagens.map(({ texto, fora }) => (
+          <li key={texto} className={`flex items-start gap-2 ${fora ? 'text-ink/45' : 'text-ink'}`}>
+            {fora ? <Xis className="mt-0.5 h-4 w-4 shrink-0" /> : <Check className="mt-0.5 h-4 w-4 shrink-0 text-profit" />}
+            {texto}
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-auto pt-6">
+        {atual ? (
+          <p className="flex h-12 w-full items-center justify-center rounded-xl bg-surface-raise text-sm font-bold text-ink/60">
+            Seu plano atual
+          </p>
+        ) : gratis ? (
+          <Link
+            to="/"
+            viewTransition
+            className="flex h-12 w-full items-center justify-center rounded-xl border border-line text-sm font-bold text-ink transition-colors hover:bg-surface-raise"
+          >
+            Continuar no Free
+          </Link>
+        ) : (
+          <button
+            type="button"
+            disabled={!definido}
+            onClick={() => onEscolher(plano.value)}
+            className={`h-12 w-full rounded-xl text-sm font-bold transition-[background-color,opacity] disabled:cursor-not-allowed disabled:opacity-45 ${
+              plano.popular ? 'bg-brik text-paper hover:bg-brik-dark' : 'bg-ink text-surface hover:opacity-90'
+            }`}
+          >
+            {definido ? `Assinar o ${plano.nome}` : 'Em breve'}
+          </button>
+        )}
+        {escolhido && (
+          <p role="status" className="mt-2.5 text-center text-xs leading-snug text-ink/60">
+            O pagamento ainda não está disponível. Assim que estiver, você assina por aqui.
+          </p>
+        )}
+      </div>
+    </article>
+  )
+}
+
+function Planos() {
+  const [anual, setAnual] = useState(false)
+  const [escolhido, setEscolhido] = useState(null)
+  const planoAtual = usePreferenciasStore((state) => state.planoAtual)
+  const { user, perfil } = usePerfil()
+  const foto = fotoDaConta(user, perfil)
+
+  return (
+    <div className="mx-auto min-h-screen w-full max-w-md bg-surface pb-28 shadow-xl lg:max-w-none lg:pb-16 lg:shadow-none">
+      <BrandHeader />
+
+      <main className="px-4 pt-6 lg:mx-auto lg:max-w-5xl lg:px-8 lg:pt-12">
+        <div className="text-center">
+          <h1 className="text-[28px] font-bold leading-tight tracking-tight text-ink lg:text-[40px]">Escolha seu plano</h1>
+          <p className="mx-auto mt-2 max-w-md text-sm text-ink/60 lg:text-base">
+            Comece grátis com o controle do seu brique. Assine para o radar te avisar das oportunidades antes de todo mundo.
+          </p>
+        </div>
+
+        <div className="mt-6">
+          <Cobranca anual={anual} onChange={setAnual} />
+          {anual && (
+            <p className="mt-2 text-center text-xs text-ink/55">Os valores do plano anual ainda vão ser definidos.</p>
+          )}
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 gap-9 lg:mt-12 lg:grid-cols-3 lg:items-stretch lg:gap-5">
+          {PLANOS.map((plano, indice) => (
+            <Cartao
+              key={plano.value}
+              plano={plano}
+              anual={anual}
+              indice={indice}
+              atual={plano.value === planoAtual}
+              foto={foto}
+              escolhido={escolhido === plano.value}
+              onEscolher={setEscolhido}
+            />
+          ))}
+        </div>
+
+        <p className="mt-8 text-center text-xs text-ink/50">Preços em reais. Dá para trocar ou cancelar o plano quando quiser.</p>
+      </main>
+    </div>
+  )
+}
+
+export default Planos
