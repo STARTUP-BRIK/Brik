@@ -9,6 +9,7 @@ import FiltroCidade from '../components/FiltroCidade.jsx'
 import FiltroOfertas from '../components/FiltroOfertas.jsx'
 import { CATEGORIAS, NIVEIS } from '../config/categorias.js'
 import { TODAS, cidadeDe, passaNaCidade } from '../config/cidades.js'
+import { dataDoAnuncio, inicioDoPeriodo } from '../lib/postagem.js'
 
 // Posição de cada selo na escala (boa = 0), para comparar com o nível mínimo.
 const RANK = Object.fromEntries(NIVEIS.map(({ value }, i) => [value, i]))
@@ -37,6 +38,11 @@ function Home({ desfocado = false }) {
   const setPrecoMaximo = usePreferenciasStore((state) => state.setPrecoMaximo)
   const filtroDefeito = usePreferenciasStore((state) => state.filtroDefeito)
   const setFiltroDefeito = usePreferenciasStore((state) => state.setFiltroDefeito)
+  // Data do anúncio: ordem (mais recentes ou mais antigos) e período.
+  const ordem = usePreferenciasStore((state) => state.ordem)
+  const setOrdem = usePreferenciasStore((state) => state.setOrdem)
+  const periodo = usePreferenciasStore((state) => state.periodo)
+  const setPeriodo = usePreferenciasStore((state) => state.setPeriodo)
   // Com os defeituosos escondidos pelas Configurações, o filtro não tem o que fazer.
   const defeitoAtivo = mostrarDefeito ? filtroDefeito : 'todos'
 
@@ -77,16 +83,27 @@ function Home({ desfocado = false }) {
 
   // Configurações + botão Filtros. As contagens do filtro de cidade saem daqui,
   // para o número ao lado de cada cidade bater com o que o feed mostra.
-  const doFeed = useMemo(
-    () =>
-      doConfig.filter(
-        (item) =>
-          niveisAtivos.includes(item.opportunity_level) &&
-          (precoMaximo == null || Number(item.price) <= precoMaximo) &&
-          (defeitoAtivo === 'todos' || (defeitoAtivo === 'so') === Boolean(item.defeito)),
-      ),
-    [doConfig, niveisAtivos, precoMaximo, defeitoAtivo],
-  )
+  // Já na ordem da data do anúncio escolhida (sem data, vão para o fim).
+  const doFeed = useMemo(() => {
+    const desde = inicioDoPeriodo(periodo)
+    const quando = (item) => {
+      const iso = dataDoAnuncio(item)
+      return iso ? new Date(iso).getTime() : null
+    }
+    return doConfig
+      .filter((item) => {
+        if (!niveisAtivos.includes(item.opportunity_level)) return false
+        if (precoMaximo != null && Number(item.price) > precoMaximo) return false
+        if (defeitoAtivo !== 'todos' && (defeitoAtivo === 'so') !== Boolean(item.defeito)) return false
+        return !desde || (quando(item) ?? 0) >= desde.getTime()
+      })
+      .map((item) => ({ item, t: quando(item) }))
+      .sort((a, b) => {
+        if (a.t == null || b.t == null) return (a.t == null) - (b.t == null)
+        return ordem === 'antigos' ? a.t - b.t : b.t - a.t
+      })
+      .map(({ item }) => item)
+  }, [doConfig, niveisAtivos, precoMaximo, defeitoAtivo, periodo, ordem])
 
   // Cidades com ofertas, da que tem mais para a que tem menos.
   const cidades = useMemo(() => {
@@ -118,7 +135,8 @@ function Home({ desfocado = false }) {
     [semCategoria, category],
   )
 
-  const filtrosOferta = niveisAtivos.length < permitidos.length || precoMaximo != null || defeitoAtivo !== 'todos'
+  const filtrosOferta =
+    niveisAtivos.length < permitidos.length || precoMaximo != null || defeitoAtivo !== 'todos' || periodo !== 'todos' || ordem !== 'recentes'
   const filtering = category !== null || query.trim() !== '' || cidade !== TODAS || filtrosOferta
   // Há ofertas, mas as Configurações (categorias, selo mínimo ou defeito) esconderam todas.
   const escondidasPelaConfig = !filtering && items.length > 0
@@ -127,6 +145,8 @@ function Home({ desfocado = false }) {
     setNiveis(NIVEIS.map(({ value }) => value))
     setPrecoMaximo(null)
     setFiltroDefeito('todos')
+    setOrdem('recentes')
+    setPeriodo('todos')
   }
 
   function clearFilters() {
@@ -152,6 +172,10 @@ function Home({ desfocado = false }) {
       defeito={defeitoAtivo}
       defeitoPermitido={mostrarDefeito}
       onDefeito={setFiltroDefeito}
+      ordem={ordem}
+      onOrdem={setOrdem}
+      periodo={periodo}
+      onPeriodo={setPeriodo}
       teto={teto}
       resultado={visible.length}
       onLimpar={limparFiltrosOferta}
@@ -160,7 +184,9 @@ function Home({ desfocado = false }) {
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-surface pb-28 shadow-xl lg:max-w-none lg:pb-12 lg:shadow-none">
-      <BrandHeader className="lg:rounded-none lg:px-0 lg:pb-8 lg:pt-8">
+      {/* Fora do Layout (onboarding) não há TopBar e a logo fica aqui: no desktop,
+          na mesma coluna da busca, em vez de colada na lateral. */}
+      <BrandHeader className="lg:rounded-none lg:px-0 lg:pb-8 lg:pt-8" classeLogo="lg:mx-auto lg:max-w-7xl lg:px-8">
         {/* No desktop a logo fica na TopBar, e o header verde vira a faixa de busca,
             de ponta a ponta, com o conteúdo na mesma largura da TopBar (max-w-7xl). */}
         <div className="lg:mx-auto lg:max-w-7xl lg:px-8">
@@ -219,7 +245,7 @@ function Home({ desfocado = false }) {
       <div className="lg:mx-auto lg:flex lg:max-w-7xl lg:items-start lg:gap-8 lg:px-8 lg:pt-6">
         <aside
           aria-label="Filtrar ofertas"
-          className="hidden lg:sticky lg:top-20 lg:order-last lg:flex lg:max-h-[calc(100dvh-6rem)] lg:w-80 lg:shrink-0 lg:flex-col lg:gap-5 lg:overflow-y-auto lg:overscroll-contain lg:rounded-2xl lg:bg-surface-card lg:p-4 lg:shadow-card lg:ring-1 lg:ring-line"
+          className={`hidden lg:sticky lg:top-20 lg:order-last lg:flex lg:max-h-[calc(100dvh-6rem)] lg:w-80 lg:shrink-0 lg:flex-col lg:gap-5 lg:overflow-y-auto lg:overscroll-contain lg:rounded-2xl lg:bg-surface-card lg:p-4 lg:shadow-card lg:ring-1 lg:ring-line ${desfoque}`}
         >
           <div>
             <h2 className="text-base font-bold text-ink">Refinar ofertas</h2>

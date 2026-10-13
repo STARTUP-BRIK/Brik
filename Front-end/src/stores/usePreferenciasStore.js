@@ -32,6 +32,11 @@ export const PREFERENCIAS_PADRAO = {
   precoMaximo: null,
   // Aparelhos com defeito: 'todos', 'sem' (só sem defeito) ou 'so' (só com).
   filtroDefeito: 'todos',
+  // Data do anúncio (lib/postagem.js): ordem 'recentes' ou 'antigos' e período
+  // ('todos', 'hoje', '3d', '7d', '30d'). Ficam só no aparelho (não vão para
+  // public.configuracoes).
+  ordem: 'recentes',
+  periodo: 'todos',
 
   // Notificações: só as escolhas; os avisos ainda não são enviados.
   notificacoes: {
@@ -59,6 +64,8 @@ export const usePreferenciasStore = create(
       setPrecoMaximo: (precoMaximo) => set({ precoMaximo }),
       setMostrarDefeito: (mostrarDefeito) => set({ mostrarDefeito }),
       setFiltroDefeito: (filtroDefeito) => set({ filtroDefeito }),
+      setOrdem: (ordem) => set({ ordem }),
+      setPeriodo: (periodo) => set({ periodo }),
       // Pelo menos uma categoria fica ligada, senão o Início ficaria sempre vazio.
       alternarCategoria: (value) =>
         set(({ categorias }) => {

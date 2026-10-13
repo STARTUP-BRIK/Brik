@@ -813,6 +813,21 @@ body {
 @keyframes ob-enche-x { from { transform: scaleX(0); } }
 @keyframes ob-enche-y { from { transform: scaleY(0); } }
 
+/* 12 · cada imagem do mapa entra com um fade quando carrega */
+.ob-tile {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.ob-tile[data-ok] {
+  opacity: 1;
+}
+
+/* 12 · o mapa abre na rua e se afasta até o zoom do raio (--ob-afasta) */
+@keyframes ob-afasta {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(var(--ob-afasta)); opacity: 0; }
+}
+
 /* 07 · os tracinhos que sobem de cada dia até o total da semana. 260 cobre o
    traço mais longo (~200 no viewBox), que fica com o tracejado do mesmo tamanho. */
 @keyframes ob-traco { from { stroke-dashoffset: 260; } }
@@ -863,7 +878,7 @@ body {
   outline: none;
 }
 
-/* Campos sobre o fundo verde (01a) e no tema da tela (19b). */
+/* Campos sobre o fundo verde (01a). */
 .ob-campo-verde:focus-within {
   box-shadow: 0 0 0 2px #a8dccf, 0 4px 12px -6px rgba(0, 0, 0, 0.4);
 }

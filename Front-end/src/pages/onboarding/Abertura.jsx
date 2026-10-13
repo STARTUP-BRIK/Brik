@@ -53,7 +53,7 @@ export function BoasVindas() {
         </p>
 
         <Link
-          to={caminho('nome')}
+          to={caminho('cadastro')}
           className="mt-6 flex h-[50px] items-center justify-center gap-2 rounded-xl bg-paper text-[15px] font-bold text-brik shadow-[0_8px_20px_-8px_rgba(0,0,0,0.5)]"
         >
           Começar
@@ -255,11 +255,10 @@ export function Nome() {
           <button
             type="submit"
             disabled={!pode || enviando}
-            className={`mt-auto flex h-[52px] items-center justify-center gap-2 rounded-xl text-[15px] font-bold ${
-              pode
-                ? 'border-[1.5px] border-mint text-mint'
-                : 'bg-white/12 text-paper/60 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]'
-            } ${enviando ? 'cursor-wait opacity-70' : ''}`}
+            className={`mt-auto flex h-[52px] items-center justify-center gap-2 rounded-xl text-[15px] font-bold ${pode
+              ? 'border-[1.5px] border-mint text-mint'
+              : 'bg-white/12 text-paper/60 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]'
+              } ${enviando ? 'cursor-wait opacity-70' : ''}`}
           >
             {enviando ? 'Criando conta…' : 'Criar conta e continuar'}
             {!enviando && <SetaDireita />}
@@ -333,16 +332,14 @@ export function Tema() {
         role="radio"
         aria-checked={on}
         onClick={() => setModoEscuro(escuro)}
-        className={`flex flex-col items-center gap-3.5 rounded-[20px] border-2 bg-surface-card px-3 pb-4 pt-3.5 text-ink transition-colors duration-[350ms] ${
-          on ? 'border-ob-destaque' : 'border-line'
-        }`}
+        className={`flex flex-col items-center gap-3.5 rounded-[20px] border-2 bg-surface-card px-3 pb-4 pt-3.5 text-ink transition-colors duration-[350ms] ${on ? 'border-ob-destaque' : 'border-line'
+          }`}
       >
         <Miniatura escuro={escuro} />
         <span className="flex w-full items-center justify-center gap-2 text-[15px] font-bold">
           <span
-            className={`flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 ${
-              on ? 'border-ob-destaque' : 'border-mute'
-            }`}
+            className={`flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 ${on ? 'border-ob-destaque' : 'border-mute'
+              }`}
           >
             <span className={`h-2 w-2 rounded-full ${on ? 'bg-ob-destaque' : ''}`} />
           </span>

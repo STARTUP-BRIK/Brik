@@ -2,11 +2,12 @@ import { useRef, useState } from 'react'
 import { ChevronDownIcon, FilterIcon } from './icons.jsx'
 import { NIVEIS } from '../config/categorias.js'
 import { formatBRL, formatInt } from '../lib/format.js'
+import { ORDENS, PERIODOS } from '../lib/postagem.js'
 import { classeBotaoPainel, classePosicaoPainel, useFecharPainel } from '../lib/usePainel.js'
 
 // Botão "Filtros" do header verde do Início, ao lado da cidade. Abre um painel
-// com os selos (quais aparecem), os aparelhos com defeito e o máximo que a
-// pessoa quer gastar. Tudo vale
+// com os selos (quais aparecem), os aparelhos com defeito, a data do anúncio
+// (ordem e período) e o máximo que a pessoa quer gastar. Tudo vale
 // na hora — o feed atrás já muda —, e o botão do rodapé só fecha, mostrando
 // quantas ofertas sobraram.
 //
@@ -15,6 +16,8 @@ import { classeBotaoPainel, classePosicaoPainel, useFecharPainel } from '../lib/
 // aparecem desligados, com o aviso.
 // `defeito`: 'todos', 'sem' ou 'so'; `defeitoPermitido` false quando as
 // Configurações escondem os aparelhos com defeito (a escolha fica desligada).
+// `ordem` ('recentes' ou 'antigos') e `periodo` (lib/postagem.js): pela data
+// em que o anúncio foi postado.
 // `teto`: o maior preço do feed, arredondado — é o fim da régua de preço.
 // `lateral`: a versão da coluna lateral do desktop, com um resumo do que está
 // filtrado no próprio botão.
@@ -45,6 +48,10 @@ function FiltroOfertas({
   defeito,
   defeitoPermitido,
   onDefeito,
+  ordem,
+  onOrdem,
+  periodo,
+  onPeriodo,
   teto,
   resultado,
   onLimpar,
@@ -56,7 +63,12 @@ function FiltroOfertas({
   useFecharPainel(aberto, setAberto, raizRef, botaoRef)
 
   const filtraNivel = niveis.length < permitidos.length
-  const ativos = (filtraNivel ? 1 : 0) + (precoMaximo != null ? 1 : 0) + (defeito !== 'todos' ? 1 : 0)
+  const ativos =
+    (filtraNivel ? 1 : 0) +
+    (precoMaximo != null ? 1 : 0) +
+    (defeito !== 'todos' ? 1 : 0) +
+    (ordem !== 'recentes' ? 1 : 0) +
+    (periodo !== 'todos' ? 1 : 0)
   const atalhos = ATALHOS.filter((valor) => valor < teto).slice(0, 4)
   const minimo = NIVEIS.find((n) => n.value === permitidos[0])
 
@@ -67,6 +79,8 @@ function FiltroOfertas({
     [
       filtraNivel && selosLigados.join(', '),
       DEFEITO.find((d) => d.value === defeito)?.resumo,
+      PERIODOS.find((p) => p.value === periodo)?.resumo,
+      ORDENS.find((o) => o.value === ordem)?.resumo,
       precoMaximo != null && `até ${formatBRL(precoMaximo)}`,
     ]
       .filter(Boolean)
@@ -204,6 +218,50 @@ function FiltroOfertas({
           </section>
 
           <section className="painel-item mt-3.5 sm:mt-5" style={{ '--i': 2 }}>
+            <h2 id="filtro-data" className="text-[11px] font-bold uppercase tracking-wide text-mute">
+              Data do anúncio
+            </h2>
+            <div role="radiogroup" aria-labelledby="filtro-data" className="mt-2 grid grid-cols-2 gap-1 rounded-full bg-surface-raise p-1">
+              {ORDENS.map(({ value, label }) => {
+                const ativo = ordem === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={ativo}
+                    onClick={() => onOrdem(value)}
+                    className={`rounded-full py-1 text-xs font-medium transition-colors ${
+                      ativo ? 'bg-brik text-paper' : 'text-ink hover:bg-line/70'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+            <div role="radiogroup" aria-label="Período" className="mt-2 flex flex-wrap gap-1.5">
+              {PERIODOS.map(({ value, label }) => {
+                const ativo = periodo === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={ativo}
+                    onClick={() => onPeriodo(value)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      ativo ? 'bg-brik text-paper' : 'bg-surface-raise text-ink hover:bg-line/70'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+
+          <section className="painel-item mt-3.5 sm:mt-5" style={{ '--i': 3 }}>
             <div className="flex items-baseline justify-between gap-2">
               <h2 className="text-[11px] font-bold uppercase tracking-wide text-mute">Quanto posso gastar</h2>
               <span key={precoMaximo ?? 'livre'} className="painel-valor text-sm font-bold text-brik">
@@ -262,7 +320,7 @@ function FiltroOfertas({
             </div>
           </section>
 
-          <div className="painel-item mt-3.5 flex gap-2 sm:mt-5" style={{ '--i': 3 }}>
+          <div className="painel-item mt-3.5 flex gap-2 sm:mt-5" style={{ '--i': 4 }}>
             <button
               type="button"
               onClick={onLimpar}

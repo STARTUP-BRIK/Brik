@@ -64,8 +64,9 @@ export async function salvarOnboarding(user) {
       meta_lucro_mensal: r.meta,
       plano: r.plano,
       cep: r.cep || null,
-      lat: r.lat,
-      lng: r.lng,
+      // No banco, ~100 m (3 casas) bastam para o raio.
+      lat: r.lat == null ? null : Math.round(r.lat * 1000) / 1000,
+      lng: r.lng == null ? null : Math.round(r.lng * 1000) / 1000,
     })
     .eq('user_id', user.id)
   if (extras) console.warn('Respostas do onboarding ainda sem coluna no banco:', extras.message)

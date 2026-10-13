@@ -9,7 +9,9 @@ import { ComTopBar } from './layoutContext.js'
 // outra ao navegar (ver index.css). Com voltarPara, o header verde ganha uma seta
 // branca à esquerda que leva para essa rota, e a logo vai para o centro na mesma
 // altura: ao navegar ela só desliza para o lado, sem subir.
-function BrandHeader({ dashboard = false, voltarPara, className = '', children, ...props }) {
+// `classeLogo`: classes extras da linha da logo (a Home alinha a logo à coluna do
+// conteúdo no desktop quando está fora do Layout, como no onboarding).
+function BrandHeader({ dashboard = false, voltarPara, className = '', classeLogo = '', children, ...props }) {
   // No desktop, dentro do Layout, a logo já está na TopBar: some a linha da logo e,
   // se o header não tem mais nada (a busca da Home), some o header inteiro.
   const comTopBar = useContext(ComTopBar)
@@ -24,7 +26,7 @@ function BrandHeader({ dashboard = false, voltarPara, className = '', children, 
   return (
     <header className={`${base} ${children ? '' : soNoCelular} ${className}`} {...props}>
       <div
-        className={`relative flex items-center ${dashboard || voltarPara ? 'justify-center' : ''} ${children ? 'mb-5' : ''} ${soNoCelular}`}
+        className={`relative flex items-center ${dashboard || voltarPara ? 'justify-center' : ''} ${children ? 'mb-5' : ''} ${soNoCelular} ${classeLogo}`}
       >
         {voltarPara && (
           <Link
