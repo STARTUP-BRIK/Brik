@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 // Peças das telas do onboarding, desenhadas como no canvas (390 × 844). No
@@ -196,15 +196,42 @@ function useEncaixe() {
   return encaixe
 }
 
+// Enquanto a tela está aberta, a página por trás não rola nem estica (classe
+// ob-travado no <html>, ver index.css), e o fundo dela fica da cor da tela: no
+// celular, o gesto de rolar não leva mais a tela junto nem mostra a faixa branca.
+// Conta as telas abertas: na troca de passo, a nova monta antes de a antiga sair.
+let telasAbertas = 0
+
+function useTravaPagina(pintura) {
+  useLayoutEffect(() => {
+    const raiz = document.documentElement
+    telasAbertas += 1
+    raiz.classList.add('ob-travado')
+    // Cor sólida do fundo da tela; com gradiente (sem cor sólida), a do tema.
+    const cor = pintura.current ? getComputedStyle(pintura.current).backgroundColor : ''
+    if (cor && cor !== 'rgba(0, 0, 0, 0)' && cor !== 'transparent') raiz.style.setProperty('--ob-fundo-pagina', cor)
+    else raiz.style.removeProperty('--ob-fundo-pagina')
+    return () => {
+      telasAbertas -= 1
+      if (telasAbertas > 0) return
+      raiz.classList.remove('ob-travado')
+      raiz.style.removeProperty('--ob-fundo-pagina')
+    }
+  }, [pintura])
+}
+
 // `fundo`: estilo do fundo (cor ou gradientes), esticado na janela inteira.
 // `classeFundo`: no lugar do fundo padrão (o verde do login, na 01 e 01a).
 // A tela é presa à janela (fixed) e não rola; o conteúdo fica numa coluna no
 // meio, que no celular ocupa a largura toda.
 export function Tela({ fundo, classeFundo, className = '', children }) {
   const { escala, largura, altura, topo, visivel } = useEncaixe()
+  const pintura = useRef(null)
+  useTravaPagina(pintura)
   return (
-    <div className="fixed inset-x-0 overflow-hidden" style={{ top: topo, height: visivel }}>
+    <div className="fixed inset-x-0 overflow-hidden overscroll-none" style={{ top: topo, height: visivel }}>
       <div
+        ref={pintura}
         className={`origin-top-left transition-colors duration-[350ms] ${classeFundo ?? (fundo ? 'text-ink' : 'bg-surface text-ink')}`}
         style={{
           width: largura,
