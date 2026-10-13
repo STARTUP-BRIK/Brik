@@ -46,6 +46,19 @@ export const PREFERENCIAS_PADRAO = {
     novidades: false,
   },
 
+  // Notificações: de quais modelos a pessoa quer ser avisada (ids de
+  // config/modelos.js). Vem da tela de modelos do onboarding. Fica só no
+  // aparelho por enquanto (sem coluna em public.configuracoes).
+  modelosNotificacao: [],
+
+  // Plano em que a pessoa está (config/planos.js). Sem pagamento integrado,
+  // todo mundo está no Free; a assinatura, quando existir, troca este valor.
+  planoAtual: 'gratis',
+
+  // Dashboard: meta de lucro do mês, em reais. Vem do onboarding (tela 13) e o
+  // lápis do card troca. Também só no aparelho (ver lib/useMetaMensal.js).
+  metaMensal: 2000,
+
   // Passos para seu primeiro Brique: índices dos passos marcados.
   passosFeitos: [],
 }
@@ -66,6 +79,8 @@ export const usePreferenciasStore = create(
       setFiltroDefeito: (filtroDefeito) => set({ filtroDefeito }),
       setOrdem: (ordem) => set({ ordem }),
       setPeriodo: (periodo) => set({ periodo }),
+      setModelosNotificacao: (modelosNotificacao) => set({ modelosNotificacao }),
+      setMetaMensal: (metaMensal) => set({ metaMensal }),
       // Pelo menos uma categoria fica ligada, senão o Início ficaria sempre vazio.
       alternarCategoria: (value) =>
         set(({ categorias }) => {

@@ -1,4 +1,4 @@
-import { consertaValido } from '../pages/onboarding/fluxo.js'
+import { consertaValido, modelosValidos } from '../pages/onboarding/fluxo.js'
 import { useAuthStore } from '../stores/useAuthStore.js'
 import { useOnboardingStore } from '../stores/useOnboardingStore.js'
 import { usePreferenciasStore } from '../stores/usePreferenciasStore.js'
@@ -6,10 +6,17 @@ import { supabase } from './supabase.js'
 
 // Categorias e defeito do radar viram as Configurações do Início (com conta, o
 // sincronizarConta grava em public.configuracoes). Antes do feed real (15), para
-// ele já abrir filtrado pelo radar, e de novo no fim.
+// ele já abrir filtrado pelo radar, e de novo no fim. Os modelos (10b) e a meta
+// (13) vão junto: as respostas do onboarding são apagadas no fim, e é das
+// preferências que as Notificações e o card da meta do Dashboard leem.
 export function aplicarRadar() {
   const r = useOnboardingStore.getState()
-  usePreferenciasStore.setState({ categorias: r.categorias, mostrarDefeito: consertaValido(r).length > 0 })
+  usePreferenciasStore.setState({
+    categorias: r.categorias,
+    mostrarDefeito: consertaValido(r).length > 0,
+    modelosNotificacao: modelosValidos(r),
+    metaMensal: r.meta,
+  })
 }
 
 // Leva as respostas do onboarding (guardadas no aparelho) para a conta, no fim

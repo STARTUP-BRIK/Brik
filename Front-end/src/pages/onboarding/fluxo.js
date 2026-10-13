@@ -61,10 +61,10 @@ export const muitoTempo = (r) => r.tempoBusca === 'h2' || r.tempoBusca === 'h3'
 
 // --- Para onde cada tela leva --------------------------------------------------
 
-// A conta é criada na 01a (nome): todas as telas seguintes pedem sessão.
+// A conta é criada na 01a (cadastro): todas as telas seguintes pedem sessão.
 export function proximo(passo, r) {
   const seguinte = {
-    nome: 'tema',
+    cadastro: 'tema',
     tema: 'rolagem',
     rolagem: 'jeito-melhor',
     'jeito-melhor': 'solucao',
@@ -93,7 +93,7 @@ export function proximo(passo, r) {
 // A seta de voltar das telas que têm uma (as outras não voltam, como no canvas).
 export function anterior(passo, r) {
   const volta = {
-    nome: BOAS_VINDAS,
+    cadastro: BOAS_VINDAS,
     equipe: caminho('solucao'),
     tempo: caminho('equipe'),
     horas: caminho('tempo'),

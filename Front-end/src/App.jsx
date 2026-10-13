@@ -18,6 +18,7 @@ import EmBreve from './pages/EmBreve.jsx'
 import VerificarImei from './pages/VerificarImei.jsx'
 import Privacidade from './pages/perfil/Privacidade.jsx'
 import Notificacoes from './pages/perfil/Notificacoes.jsx'
+import Planos from './pages/Planos.jsx'
 import Configuracoes from './pages/perfil/Configuracoes.jsx'
 import Ajuda from './pages/perfil/Ajuda.jsx'
 import Termos from './pages/perfil/Termos.jsx'
@@ -48,6 +49,8 @@ const router = createBrowserRouter([
           // Meu Perfil acesa) e voltam para o perfil pela seta do título.
           { path: '/perfil/privacidade', element: <Privacidade /> },
           { path: '/perfil/notificacoes', element: <Notificacoes /> },
+          // Escolha de plano (Free, Intermedium, Pro). Entra pelo "Meu plano" do Perfil.
+          { path: '/planos', element: <Planos /> },
           { path: '/perfil/configuracoes', element: <Configuracoes /> },
           { path: '/perfil/ajuda', element: <Ajuda /> },
           { path: '/perfil/termos', element: <Termos /> },
@@ -74,8 +77,8 @@ const router = createBrowserRouter([
   // no fim). Substituiu o quiz; /quiz ficou só como desvio.
   { path: '/boas-vindas', element: <BoasVindas /> },
   { path: '/onboarding/:passo', element: <Onboarding /> },
-  { path: '/onboarding', element: <Navigate to="/onboarding/nome" replace /> },
-  { path: '/quiz', element: <Navigate to="/onboarding/nome" replace /> },
+  { path: '/onboarding', element: <Navigate to="/onboarding/cadastro" replace /> },
+  { path: '/quiz', element: <Navigate to="/onboarding/cadastro" replace /> },
   // Autenticação: tela cheia, sem navbar. A recuperação de senha ainda não existe.
   { path: '/login', element: <Login /> },
   { path: '/cadastro', element: <Cadastro /> },

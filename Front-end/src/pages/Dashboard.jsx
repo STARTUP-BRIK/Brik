@@ -7,10 +7,12 @@ import { CapitalParado, GiroMedio } from '../components/dashboard/CapitalGiro.js
 import InvestimentoRetorno from '../components/dashboard/InvestimentoRetorno.jsx'
 import LucroAcumulado from '../components/dashboard/LucroAcumulado.jsx'
 import MelhoresRois from '../components/dashboard/MelhoresRois.jsx'
+import MetaDoMes from '../components/dashboard/MetaDoMes.jsx'
 import MetricasMes from '../components/dashboard/MetricasMes.jsx'
 import MeuEstoque from '../components/dashboard/MeuEstoque.jsx'
 import { HiddenProvider } from '../components/dashboard/hidden.js'
 import { dashboardDoEstoque } from '../lib/dashboard.js'
+import { useMetaMensal } from '../lib/useMetaMensal.js'
 import { capasEmCache, comCapas, linhasDoEstoque } from '../lib/estoque.js'
 import { useUsuarioId } from '../stores/useAuthStore.js'
 import { usePreferenciasStore } from '../stores/usePreferenciasStore.js'
@@ -66,7 +68,7 @@ function useDashboardData(forcarExemplo) {
   }, [exemplo, linhas, userId])
 
   const pronto = exemplo || userId === null || linhas !== null || desistiu
-  return { data, pronto }
+  return { data, pronto, exemplo }
 }
 
 // Ordem em que a tela se monta. Cada bloco numera os próprios elementos a partir
@@ -79,13 +81,15 @@ const STEP = {
   capitalParado: 7,
   giroMedio: 8,
   investimentoRetorno: 9, // + anel, investido e retornado (9 a 12)
-  mes: 13, // + os quatro cartões (13 a 17)
-  rois: 18, // + rosca e lista (18 a 20)
-  estoque: 21, // + abas e itens (21 a 23)
+  meta: 13, // + título, valores e barra (13 a 16)
+  mes: 17, // + os quatro cartões (17 a 21)
+  rois: 22, // + rosca e lista (22 a 24)
+  estoque: 25, // + abas e itens (25 a 27)
 }
 
 function Dashboard({ exemplo = false }) {
-  const { data, pronto } = useDashboardData(exemplo)
+  const { data, pronto, exemplo: comExemplo } = useDashboardData(exemplo)
+  const { meta, salvarMeta } = useMetaMensal(comExemplo)
   // Abre com os valores escondidos se o usuário pediu isso em Privacidade.
   const [hidden, setHidden] = useState(() => usePreferenciasStore.getState().ocultarValores)
 
@@ -149,7 +153,9 @@ function Dashboard({ exemplo = false }) {
                 <InvestimentoRetorno step={STEP.investimentoRetorno} data={data.investimentoRetorno} />
               </div>
 
-              <div className="mt-4 lg:col-span-7 lg:mt-0">
+              {/* A meta do mês (do onboarding) logo antes dos números do mês. */}
+              <div className="mt-4 flex flex-col gap-3 lg:col-span-7 lg:mt-0 lg:gap-5">
+                <MetaDoMes step={STEP.meta} meta={meta} onMeta={salvarMeta} lucro={data.mes.lucro} mes={data.mes.nome} />
                 <MetricasMes step={STEP.mes} data={data.mes} />
               </div>
 
