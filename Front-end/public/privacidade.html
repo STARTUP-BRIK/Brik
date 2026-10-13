@@ -25,7 +25,7 @@
 
   <main>
     <h1>Política de Privacidade</h1>
-    <p class="data">Última atualização: 10 de outubro de 2026</p>
+    <p class="data">Última atualização: 13 de outubro de 2026</p>
 
     <p>
       Esta política explica como o <strong>Brik</strong> (app-brik.vercel.app) coleta, usa, guarda,
@@ -63,7 +63,11 @@
     <p><strong>Dados que você informa no app:</strong></p>
     <ul>
       <li>perfil (opcional): nome de usuário, telefone, data de nascimento, localização e foto;</li>
-      <li>questionário inicial: orçamento, cidade, distância de busca e categoria de produto de interesse;</li>
+      <li>CEP, ou a localização do seu aparelho se você permitir, e a localização aproximada que vem dele
+        (coordenadas arredondadas para cerca de 100 metros, bairro e cidade), junto com o raio em quilômetros que
+        você escolhe, para mostrar anúncios perto de você;</li>
+      <li>respostas do onboarding: tamanho da equipe, tempo que você passa procurando anúncios, tempo de
+        resposta, categorias de interesse, se procura aparelho com defeito, meta de lucro mensal e plano escolhido;</li>
       <li>anúncios que você salva;</li>
       <li>estoque: produtos que você comprou ou vendeu, com fotos, preços, datas e status;</li>
       <li>cálculos de lucro feitos na calculadora.</li>
@@ -78,7 +82,7 @@
     <h2>3. Como usamos os dados</h2>
     <ul>
       <li>criar a sua conta, identificar você e manter você conectado;</li>
-      <li>mostrar oportunidades de compra de acordo com a sua cidade, orçamento e interesses;</li>
+      <li>mostrar oportunidades de compra dentro do raio que você escolheu a partir do seu CEP ou da sua localização, de acordo com os seus interesses;</li>
       <li>guardar o seu estoque, cálculos e anúncios salvos, para você acessar de qualquer aparelho;</li>
       <li>mostrar o seu nome e a sua foto no seu perfil dentro do app;</li>
       <li>responder quando você entra em contato com a gente.</li>
@@ -108,7 +112,11 @@
       <li><strong>Supabase:</strong> banco de dados e autenticação (conta, perfil, estoque, cálculos, salvos);</li>
       <li><strong>Cloudflare R2:</strong> armazenamento das fotos do estoque e do perfil;</li>
       <li><strong>Vercel:</strong> hospedagem do site;</li>
-      <li><strong>Google:</strong> login com a conta Google, quando você escolhe essa opção.</li>
+      <li><strong>Google:</strong> login com a conta Google, quando você escolhe essa opção;</li>
+      <li><strong>AwesomeAPI e BrasilAPI:</strong> recebem só o CEP que você digita, para devolver o endereço e as
+        coordenadas dele;</li>
+      <li><strong>OpenStreetMap (Nominatim) e BigDataCloud:</strong> quando você usa a localização do aparelho,
+        recebem só as coordenadas arredondadas, para devolver o bairro e a cidade.</li>
     </ul>
     <p>
       Esses serviços podem guardar dados em servidores fora do Brasil, com proteções compatíveis com a LGPD.

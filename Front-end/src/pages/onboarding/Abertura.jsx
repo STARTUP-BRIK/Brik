@@ -84,7 +84,7 @@ function CampoVerde({ id, label, Icone, ajuda, children, ...props }) {
         <input
           id={id}
           aria-describedby={ajuda ? `${id}-ajuda` : undefined}
-          className="min-w-0 flex-1 border-0 bg-transparent text-base text-[#2b2b2b] outline-none placeholder:text-[#2b2b2b]/45"
+          className="min-w-0 flex-1 border-0 bg-transparent text-base text-[#2b2b2b] outline-none ob-sem-contorno placeholder:text-[#2b2b2b]/45"
           {...props}
         />
         {children}

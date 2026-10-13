@@ -104,6 +104,14 @@ export const Pino = (p) => (
     <circle cx="12" cy="10" r="2.4" />
   </svg>
 )
+// Mira (usar a localização do aparelho).
+export const Mira = (p) => (
+  <svg width="16" height="16" strokeWidth="2" {...traco} {...p}>
+    <circle cx="12" cy="12" r="7" />
+    <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
+    <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+  </svg>
+)
 export const Sino = (p) => (
   <svg width="18" height="18" strokeWidth="1.8" {...traco} {...p}>
     <path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5h-15S6 13 6 9Z" />

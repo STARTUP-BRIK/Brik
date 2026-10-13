@@ -22,7 +22,9 @@ export function aplicarRadar() {
 //   alter table public.preferencias
 //     add column equipe text, add column tempo_busca text,
 //     add column tempo_resposta text, add column conserta text[],
-//     add column meta_lucro_mensal numeric, add column plano text;
+//     add column meta_lucro_mensal numeric, add column plano text,
+//     add column cep text, add column lat double precision,
+//     add column lng double precision;
 export async function salvarOnboarding(user) {
   const r = useOnboardingStore.getState()
   const conserta = consertaValido(r)
@@ -61,6 +63,9 @@ export async function salvarOnboarding(user) {
       conserta,
       meta_lucro_mensal: r.meta,
       plano: r.plano,
+      cep: r.cep || null,
+      lat: r.lat,
+      lng: r.lng,
     })
     .eq('user_id', user.id)
   if (extras) console.warn('Respostas do onboarding ainda sem coluna no banco:', extras.message)

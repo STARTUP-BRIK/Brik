@@ -21,8 +21,14 @@ export const RESPOSTAS_PADRAO = {
   defeito: 'sim',
   // 11: em quais das categorias da 10 aceita aparelho com defeito
   conserta: ['iphone'],
-  // 12: cidade de partida e raio em km
-  cidade: 'Recife',
+  // 12: o CEP de onde a pessoa sai, o que ele dá (ponto, bairro, cidade e UF,
+  // ver lib/cep.js) e o raio em km que ela topa andar.
+  cep: '',
+  lat: null,
+  lng: null,
+  bairro: '',
+  cidade: '',
+  uf: '',
   raio: 15,
   // 13: meta de lucro por mês, em reais
   meta: 2000,
