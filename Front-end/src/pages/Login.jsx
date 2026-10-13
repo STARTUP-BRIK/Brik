@@ -148,7 +148,7 @@ function Login() {
 
       <p className="mt-6 text-center text-[11px] text-paper/80 lg:mt-8 lg:text-left lg:text-sm lg:text-mute">
         Não tem uma conta?{' '}
-        <Link to="/cadastro" viewTransition className={linkAuth}>
+        <Link to="/onboarding/nome" className={linkAuth}>
           Cadastre-se
         </Link>
       </p>

@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
 import LayoutTelaCheia from './components/LayoutTelaCheia.jsx'
 import RotaProtegida from './components/RotaProtegida.jsx'
@@ -14,7 +14,6 @@ import EditarPerfil from './pages/EditarPerfil.jsx'
 import AdicionarProduto from './pages/AdicionarProduto.jsx'
 import Login from './pages/Login.jsx'
 import Cadastro from './pages/Cadastro.jsx'
-import Quiz from './pages/Quiz.jsx'
 import EmBreve from './pages/EmBreve.jsx'
 import VerificarImei from './pages/VerificarImei.jsx'
 import Privacidade from './pages/perfil/Privacidade.jsx'
@@ -23,9 +22,11 @@ import Configuracoes from './pages/perfil/Configuracoes.jsx'
 import Ajuda from './pages/perfil/Ajuda.jsx'
 import Termos from './pages/perfil/Termos.jsx'
 import PrimeiroBrique from './pages/perfil/PrimeiroBrique.jsx'
+import { BoasVindas } from './pages/onboarding/Abertura.jsx'
+import Onboarding from './pages/onboarding/Onboarding.jsx'
 
 const router = createBrowserRouter([
-  // O app inteiro exige login e o quiz respondido (ver RotaProtegida).
+  // O app inteiro exige login e o onboarding feito (ver RotaProtegida).
   {
     element: <RotaProtegida />,
     children: [
@@ -69,12 +70,12 @@ const router = createBrowserRouter([
       },
     ],
   },
-  // Quiz de boas-vindas: exige login, mas não o quiz — é para onde manda quem
-  // ainda não respondeu.
-  {
-    element: <RotaProtegida exigirQuiz={false} />,
-    children: [{ path: '/quiz', element: <Quiz /> }],
-  },
+  // Onboarding: aberto, porque começa antes de existir conta (a conta é criada
+  // no fim). Substituiu o quiz; /quiz ficou só como desvio.
+  { path: '/boas-vindas', element: <BoasVindas /> },
+  { path: '/onboarding/:passo', element: <Onboarding /> },
+  { path: '/onboarding', element: <Navigate to="/onboarding/nome" replace /> },
+  { path: '/quiz', element: <Navigate to="/onboarding/nome" replace /> },
   // Autenticação: tela cheia, sem navbar. A recuperação de senha ainda não existe.
   { path: '/login', element: <Login /> },
   { path: '/cadastro', element: <Cadastro /> },

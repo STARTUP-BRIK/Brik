@@ -23,16 +23,18 @@ const ESPERA_MAX_MS = 1500
 // Os números vêm do estoque do usuário (public.estoque): o que está em estoque
 // aparece em "Meu estoque" e o que foi marcado como vendido entra no lucro, nas
 // métricas e nos ROIs. Sem login a tela fica zerada.
-// Em desenvolvimento, /dashboard?exemplo mostra a tela com os números do mockup.
+// Em desenvolvimento, /dashboard?exemplo mostra a tela com os números do mockup;
+// a prop `exemplo` faz o mesmo em qualquer ambiente (a demonstração do
+// onboarding, para quem ainda não tem conta).
 //
 // `pronto` segura a entrada até os números chegarem: se eles chegassem no meio
 // dela, os blocos que trocam de vazio para cheio (lista, gráfico, rosca)
 // remontariam fora da sequência e a tela toda seria redesenhada durante a
 // animação. As capas das fotos vêm numa segunda ida (Edge Function do R2) e só
 // trocam o src das imagens, sem mexer na estrutura.
-function useDashboardData() {
+function useDashboardData(forcarExemplo) {
   const { search } = useLocation()
-  const exemplo = import.meta.env.DEV && new URLSearchParams(search).has('exemplo')
+  const exemplo = forcarExemplo || (import.meta.env.DEV && new URLSearchParams(search).has('exemplo'))
   const userId = useUsuarioId()
   const [linhas, setLinhas] = useState(null)
   const [desistiu, setDesistiu] = useState(false)
@@ -82,8 +84,8 @@ const STEP = {
   estoque: 21, // + abas e itens (21 a 23)
 }
 
-function Dashboard() {
-  const { data, pronto } = useDashboardData()
+function Dashboard({ exemplo = false }) {
+  const { data, pronto } = useDashboardData(exemplo)
   // Abre com os valores escondidos se o usuário pediu isso em Privacidade.
   const [hidden, setHidden] = useState(() => usePreferenciasStore.getState().ocultarValores)
 

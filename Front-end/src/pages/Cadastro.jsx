@@ -70,7 +70,7 @@ function Cadastro() {
 
     setEnviando(false)
     if (data.session) {
-      navigate('/quiz', { viewTransition: true })
+      navigate('/onboarding/tema', { viewTransition: true })
     } else {
       setConfirmarEmail(email)
     }
@@ -81,7 +81,7 @@ function Cadastro() {
       <AuthLayout>
         <CodigoEmail
           email={confirmarEmail}
-          onConfirmado={() => navigate('/quiz', { viewTransition: true })}
+          onConfirmado={() => navigate('/onboarding/tema', { viewTransition: true })}
           onVoltar={() => setConfirmarEmail('')}
         />
       </AuthLayout>
