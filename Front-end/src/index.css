@@ -592,6 +592,9 @@ body {
     radial-gradient(55% 45% at 0% 12%, rgba(28, 44, 40, 0.9), transparent 70%),
     radial-gradient(75% 55% at 8% 95%, rgba(5, 34, 24, 0.95), transparent 72%),
     linear-gradient(165deg, #22493f, var(--color-brik) 55%, var(--color-brik-dark));
+  /* Coberta pelos gradientes; é a cor que o onboarding usa atrás da tela
+     (--ob-fundo-pagina) se o navegador esticar a página. */
+  background-color: var(--color-brik);
 }
 
 /* O contorno de foco padrão é petróleo e sumiria neste fundo. */
@@ -886,6 +889,23 @@ body {
 
 /* Campos cuja caixa já mostra o foco (borda ou anel): sem o contorno geral do
    :focus-visible por dentro dela. Fora de @layer, como o :focus-visible. */
+/* Telas do onboarding (Tela, em pages/onboarding/pecas.jsx): elas não rolam, e
+   enquanto uma está aberta a página por trás também não. Sem isso, o gesto de
+   rolar no celular esticava a página (o "elástico"), a tela ia junto e aparecia
+   uma faixa branca no topo; no Chrome do Android, ainda puxava para atualizar.
+   O fundo por trás é a cor da tela aberta (--ob-fundo-pagina), caso algum
+   navegador ainda estique. */
+html.ob-travado,
+html.ob-travado body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html.ob-travado {
+  background: var(--ob-fundo-pagina, var(--color-surface));
+}
+
 .ob-sem-contorno:focus-visible {
   outline: none;
 }

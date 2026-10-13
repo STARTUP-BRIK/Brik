@@ -184,7 +184,7 @@ export function Modelos() {
 
       <div
         key={atual}
-        className="ob-anima -mx-5 mt-1 min-h-0 flex-1 overflow-y-auto px-5 pb-6"
+        className="ob-anima -mx-5 mt-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6"
         style={{
           animation: 'ob-mostra .25s ease both',
           // Os modelos somem aos poucos nas bordas da lista, indicando que ela rola.
