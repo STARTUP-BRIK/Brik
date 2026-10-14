@@ -165,8 +165,8 @@ function Notificacoes() {
       ))}
 
       <Nota>
-        Os avisos começam a chegar quando as notificações forem lançadas. Suas escolhas já ficam
-        guardadas neste aparelho.
+        Os avisos começam a chegar quando as notificações forem lançadas. Suas escolhas, incluindo
+        os modelos que você acompanha, já ficam salvas na sua conta.
       </Nota>
     </SubPagina>
   )

@@ -66,17 +66,25 @@ function SeuPlano({ foto }) {
   )
 }
 
-// Botão de começar no gratuito (onboarding), no cartão do Free e no pé da tela.
-function BotaoGratis({ inicio, className = '', children }) {
+// Botão de começar no gratuito (onboarding), no cartão do Free: salva as
+// respostas e conclui o onboarding. Se der erro, o aviso aparece embaixo dele.
+function BotaoGratis({ inicio }) {
   return (
-    <button
-      type="button"
-      onClick={inicio.onGratis}
-      disabled={inicio.salvando}
-      className={`flex h-12 w-full items-center justify-center rounded-xl text-sm font-bold transition-[background-color,opacity] disabled:opacity-60 ${className}`}
-    >
-      {inicio.salvando ? 'Salvando…' : children}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={inicio.onGratis}
+        disabled={inicio.salvando}
+        className="flex h-12 w-full items-center justify-center rounded-xl border border-line text-sm font-bold text-ink transition-[background-color,opacity] hover:bg-surface-raise disabled:opacity-60"
+      >
+        {inicio.salvando ? 'Salvando…' : 'Começar no gratuito'}
+      </button>
+      {inicio.erro && (
+        <p role="alert" className="mt-2.5 text-center text-xs leading-snug text-loss">
+          {inicio.erro}
+        </p>
+      )}
+    </>
   )
 }
 
@@ -139,9 +147,7 @@ function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher, inic
             Seu plano atual
           </p>
         ) : gratis && inicio ? (
-          <BotaoGratis inicio={inicio} className="border border-line text-ink hover:bg-surface-raise">
-            Começar no gratuito
-          </BotaoGratis>
+          <BotaoGratis inicio={inicio} />
         ) : gratis ? (
           <Link
             to="/"
@@ -220,20 +226,6 @@ function Planos({ inicio }) {
             />
           ))}
         </div>
-
-        {inicio && (
-          <div className="mx-auto mt-8 max-w-sm text-center">
-            {inicio.erro && (
-              <p role="alert" className="mb-3 text-sm text-loss">
-                {inicio.erro}
-              </p>
-            )}
-            <BotaoGratis inicio={inicio} className="bg-brik text-paper hover:bg-brik-dark">
-              Prefiro começar no gratuito
-            </BotaoGratis>
-            <p className="mt-2 text-xs text-ink/50">Seu radar fica salvo. Dá para assinar um plano quando quiser.</p>
-          </div>
-        )}
 
         <p className="mt-8 text-center text-xs text-ink/50">Preços em reais. Dá para trocar ou cancelar o plano quando quiser.</p>
       </main>
