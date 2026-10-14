@@ -1,10 +1,10 @@
 // Ordem das telas do onboarding, para onde cada uma leva (algumas ramificam pela
 // resposta) e os textos que repetem as respostas da pessoa. As telas ficam em
-// /onboarding/:passo; a de boas-vindas (01) é /boas-vindas.
+// /onboarding/:passo. A primeira é o cadastro (01a); antes dele vem o login.
 
 import { idsDaCategoria } from '../../config/modelos.js'
 
-export const BOAS_VINDAS = '/boas-vindas'
+export const LOGIN = '/login'
 export const caminho = (passo) => `/onboarding/${passo}`
 
 // Largura da barra de progresso de cada pergunta, como no canvas.
@@ -93,7 +93,7 @@ export function proximo(passo, r) {
 // A seta de voltar das telas que têm uma (as outras não voltam, como no canvas).
 export function anterior(passo, r) {
   const volta = {
-    cadastro: BOAS_VINDAS,
+    cadastro: LOGIN,
     equipe: caminho('solucao'),
     tempo: caminho('equipe'),
     horas: caminho('tempo'),

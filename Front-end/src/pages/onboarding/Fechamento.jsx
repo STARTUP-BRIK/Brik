@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { PLANOS } from '../../config/planos.js'
+import { PROTECAO_ATIVA } from '../../config/protecao.js'
 import { salvarOnboarding } from '../../lib/salvarOnboarding.js'
 import { useAuthStore } from '../../stores/useAuthStore.js'
 import { useOnboardingStore } from '../../stores/useOnboardingStore.js'
@@ -175,10 +176,13 @@ export function Planos() {
   const [erro, setErro] = useState('')
   const pro = r.plano === 'pro'
 
-  // Sem conta (aberto direto pelo endereço): volta para a criação da conta.
-  if (!carregando && !session) return <Navigate to={caminho('cadastro')} replace />
+  // Sem conta (aberto direto pelo endereço): volta para a criação da conta. Com a
+  // proteção desligada (config/protecao.js, para testar o fluxo sem login), a
+  // tela abre e o botão só leva ao feed, sem salvar nada.
+  if (PROTECAO_ATIVA && !carregando && !session) return <Navigate to={caminho('cadastro')} replace />
 
   async function comecar() {
+    if (!session) return navigate('/', { replace: true })
     setSalvando(true)
     setErro('')
     try {
@@ -245,7 +249,7 @@ export function Planos() {
         </p>
       )}
 
-      <Botao onClick={comecar} disabled={salvando || !session}>
+      <Botao onClick={comecar} disabled={salvando || (PROTECAO_ATIVA && !session)}>
         {salvando ? 'Salvando…' : pro ? 'Assinar o Pro' : 'Começar no gratuito'}
       </Botao>
     </Tela>

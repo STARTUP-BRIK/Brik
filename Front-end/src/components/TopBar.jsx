@@ -25,7 +25,7 @@ function TopBar() {
         <NavLink to="/" viewTransition aria-label="Brik, início" className="justify-self-start">
           <span
             aria-hidden="true"
-            className="block aspect-[1815/676] h-8 bg-brik [mask:url(/logoBrik.png)_center/contain_no-repeat]"
+            className="logo-marca block aspect-[1815/676] h-8 bg-brik [mask:url(/logoBrik.png)_center/contain_no-repeat]"
           />
         </NavLink>
 

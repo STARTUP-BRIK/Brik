@@ -1,19 +1,19 @@
 import { useState } from 'react'
-import { Link, Navigate, useLocation } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { mascaraTelefone } from '../../lib/format.js'
 import { lembrarSessao, provedoresAtivos, supabase } from '../../lib/supabase.js'
 import { mensagemErro, useAuthStore } from '../../stores/useAuthStore.js'
 import { useOnboardingStore } from '../../stores/useOnboardingStore.js'
 import { usePreferenciasStore } from '../../stores/usePreferenciasStore.js'
 import { ConfirmarEmail } from './ConfirmarEmail.jsx'
-import { BOAS_VINDAS, caminho } from './fluxo.js'
+import { LOGIN, caminho } from './fluxo.js'
 import { Cadeado, Envelope, Fone, Google, Olho, Pessoa, SetaDireita, SetaVoltar, Tela } from './pecas.jsx'
-import { SAIDA } from './estilo.js'
 
-// 01, 01a e 01b: a porta de entrada, antes de qualquer pergunta. As duas
-// primeiras usam o fundo verde do login (.login-bg), igual nos dois temas; a
-// 01b já mostra o tema escolhido. A conta é criada na 01a, logo no começo: o
-// onboarding inteiro já acontece com ela.
+// 01a e 01b: a porta de entrada, antes de qualquer pergunta. A 01a (cadastro)
+// usa o fundo verde do login (.login-bg), igual nos dois temas; a 01b já mostra
+// o tema escolhido. A conta é criada na 01a, logo no começo: o onboarding
+// inteiro já acontece com ela. Não há mais tela de boas-vindas: o app abre no
+// login, que leva ao cadastro pelo "Cadastre-se".
 
 // Fundo do login com o petróleo fixo (tema-claro devolve --color-brik ao claro).
 function FundoVerde({ className, children }) {
@@ -21,53 +21,6 @@ function FundoVerde({ className, children }) {
     <Tela classeFundo="tema-claro login-bg text-paper" className={className}>
       {children}
     </Tela>
-  )
-}
-
-// 01 · Boas-vindas: quem é novo começa o onboarding; quem tem conta entra.
-export function BoasVindas() {
-  const logado = useAuthStore((state) => Boolean(state.session))
-  // De onde a RotaProtegida trouxe a pessoa: o login devolve para lá.
-  const { state } = useLocation()
-  if (logado) return <Navigate to="/" replace />
-
-  return (
-    <FundoVerde className="px-4 pb-7">
-      <span aria-hidden="true" className="absolute left-[196px] top-[440px] h-40 w-40 rounded-full bg-mint/60 blur-[40px]" />
-      <span aria-hidden="true" className="absolute -left-10 top-[660px] h-44 w-44 rounded-full bg-[#1f7a5c]/70 blur-[40px]" />
-
-      <div className="relative flex flex-1 flex-col items-center justify-center gap-5 pb-6">
-        <img src="/logoBrik.png" alt="Brik" className="block h-[84px] w-auto" />
-        <p className="text-sm font-medium uppercase tracking-[0.32em] text-paper/80">Garimpe ofertas</p>
-      </div>
-
-      <main
-        className="ob-anima glass-card rounded-3xl px-5 pb-5 pt-7"
-        style={{ animation: `ob-sobe-14 .7s ${SAIDA} both` }}
-      >
-        <h1 className="text-[27px] font-bold leading-[1.15] tracking-[-0.015em]">
-          As melhores oportunidades da região, antes de todo mundo.
-        </h1>
-        <p className="mt-3 text-sm leading-normal text-paper/82">
-          O Brik procura, compara com o preço da região e te avisa quando aparece anúncio abaixo da média.
-        </p>
-
-        <Link
-          to={caminho('cadastro')}
-          className="mt-6 flex h-[50px] items-center justify-center gap-2 rounded-xl bg-paper text-[15px] font-bold text-brik shadow-[0_8px_20px_-8px_rgba(0,0,0,0.5)]"
-        >
-          Começar
-          <SetaDireita />
-        </Link>
-        <Link
-          to="/login"
-          state={state}
-          className="mt-2.5 flex h-[50px] items-center justify-center rounded-xl bg-white/10 text-[15px] font-medium text-paper shadow-[inset_0_0_0_1px_rgba(255,255,255,0.3)]"
-        >
-          Já tenho conta ·<span className="ml-1 font-bold text-mint">Entrar</span>
-        </Link>
-      </main>
-    </FundoVerde>
   )
 }
 
@@ -164,7 +117,7 @@ export function Nome() {
         <ConfirmarEmail verde email={confirmarEmail} onVoltar={() => setConfirmarEmail('')} />
       ) : (
         <form onSubmit={criar} className="flex flex-1 flex-col">
-          <Link to={BOAS_VINDAS} aria-label="Voltar" className="-ml-3 flex h-11 w-11 items-center justify-center rounded-xl text-paper">
+          <Link to={LOGIN} aria-label="Voltar" className="-ml-3 flex h-11 w-11 items-center justify-center rounded-xl text-paper">
             <SetaVoltar />
           </Link>
 

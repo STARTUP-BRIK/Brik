@@ -170,30 +170,88 @@ const ALTURA = 844
 // menos 390 × 844; menor, a tela inteira diminui por igual. A área desenhada
 // fica do tamanho da janela dividido pela escala, então nunca é menor que o
 // canvas e, depois de escalada, ocupa a janela exata.
-// Usa a área visível de verdade (visualViewport): com o teclado aberto no
-// celular, a tela diminui para caber acima dele, já que não dá para rolar.
-function useEncaixe() {
-  const medir = () => {
-    const visivel = window.visualViewport
-    const largura = visivel?.width ?? window.innerWidth
-    const altura = visivel?.height ?? window.innerHeight
-    const escala = Math.min(1, largura / LARGURA, altura / ALTURA)
-    return { escala, largura: largura / escala, altura: altura / escala, topo: visivel?.offsetTop ?? 0, visivel: altura }
+//
+// Teclado: no celular ele encolhe a área visível (visualViewport). A escala não
+// acompanha: vale a altura da janela sem o teclado (a maior já vista nesta
+// largura), para os componentes ficarem do mesmo tamanho. Enquanto o teclado
+// está aberto (`teclado`), a tela rola por dentro e o campo em foco vai para a
+// parte visível. Uma queda pequena (barra do navegador) não conta como teclado.
+const TECLADO_MIN = 150
+const semTeclado = { largura: 0, altura: 0 }
+
+function medirEncaixe() {
+  const vv = window.visualViewport
+  const largura = vv?.width ?? window.innerWidth
+  const visivel = vv?.height ?? window.innerHeight
+  // Largura nova (girou o celular, mudou a janela): mede de novo.
+  if (Math.abs(semTeclado.largura - largura) > 1 || visivel > semTeclado.altura) {
+    semTeclado.largura = largura
+    semTeclado.altura = visivel
   }
-  const [encaixe, setEncaixe] = useState(medir)
+  const teclado = semTeclado.altura - visivel > TECLADO_MIN
+  const altura = teclado ? semTeclado.altura : visivel
+  const escala = Math.min(1, largura / LARGURA, altura / ALTURA)
+  return { escala, largura, altura, topo: vv?.offsetTop ?? 0, visivel, teclado }
+}
+
+function useEncaixe() {
+  const [encaixe, setEncaixe] = useState(medirEncaixe)
   useEffect(() => {
-    const atualizar = () => setEncaixe(medir())
+    const atualizar = () => setEncaixe(medirEncaixe())
     const visivel = window.visualViewport
+    // Saindo de um campo (o teclado fecha): no iPhone a janela termina de voltar
+    // depois do último resize. Mede de novo no fim da animação do teclado.
+    let espera
+    const saiuDoCampo = () => {
+      clearTimeout(espera)
+      espera = setTimeout(() => {
+        if (document.activeElement?.matches?.('input, textarea')) return
+        window.scrollTo(0, 0)
+        atualizar()
+      }, 350)
+    }
     window.addEventListener('resize', atualizar)
     visivel?.addEventListener('resize', atualizar)
     visivel?.addEventListener('scroll', atualizar)
+    document.addEventListener('focusout', saiuDoCampo)
     return () => {
+      clearTimeout(espera)
       window.removeEventListener('resize', atualizar)
       visivel?.removeEventListener('resize', atualizar)
       visivel?.removeEventListener('scroll', atualizar)
+      document.removeEventListener('focusout', saiuDoCampo)
     }
   }, [])
   return encaixe
+}
+
+// Com o teclado aberto, leva o campo em foco para o meio da parte visível (ao
+// abrir o teclado e ao passar de um campo para outro). Rola só a caixa da tela
+// (`caixa`): o scrollIntoView rolaria também a página por trás, que ficava
+// deslocada depois que o teclado fechava (faixa branca no lugar dele e a tela
+// cortada). Ao fechar, a caixa e a página voltam para o topo.
+function useCampoVisivel(teclado, caixa) {
+  useEffect(() => {
+    const el = caixa.current
+    if (!teclado) {
+      el?.scrollTo(0, 0)
+      window.scrollTo(0, 0)
+      return
+    }
+    const mostrar = () => {
+      const campo = document.activeElement
+      if (!el || !campo || !el.contains(campo)) return
+      const r = campo.getBoundingClientRect()
+      const c = el.getBoundingClientRect()
+      el.scrollBy(0, r.top + r.height / 2 - (c.top + c.height / 2))
+    }
+    const quadro = requestAnimationFrame(mostrar)
+    document.addEventListener('focusin', mostrar)
+    return () => {
+      cancelAnimationFrame(quadro)
+      document.removeEventListener('focusin', mostrar)
+    }
+  }, [teclado, caixa])
 }
 
 // Enquanto a tela está aberta, a página por trás não rola nem estica (classe
@@ -222,25 +280,37 @@ function useTravaPagina(pintura) {
 
 // `fundo`: estilo do fundo (cor ou gradientes), esticado na janela inteira.
 // `classeFundo`: no lugar do fundo padrão (o verde do login, na 01 e 01a).
-// A tela é presa à janela (fixed) e não rola; o conteúdo fica numa coluna no
-// meio, que no celular ocupa a largura toda.
+// A tela é presa à janela (fixed) e não rola (só com o teclado aberto, ver
+// useEncaixe); o conteúdo fica numa coluna no meio, que no celular ocupa a
+// largura toda.
 export function Tela({ fundo, classeFundo, className = '', children }) {
-  const { escala, largura, altura, topo, visivel } = useEncaixe()
+  const { escala, largura, altura, topo, visivel, teclado } = useEncaixe()
   const pintura = useRef(null)
+  const caixa = useRef(null)
   useTravaPagina(pintura)
+  useCampoVisivel(teclado, caixa)
   return (
-    <div className="fixed inset-x-0 overflow-hidden overscroll-none" style={{ top: topo, height: visivel }}>
-      <div
-        ref={pintura}
-        className={`origin-top-left transition-colors duration-[350ms] ${classeFundo ?? (fundo ? 'text-ink' : 'bg-surface text-ink')}`}
-        style={{
-          width: largura,
-          height: altura,
-          transform: escala < 1 ? `scale(${escala})` : undefined,
-          background: fundo,
-        }}
-      >
-        <div className={`relative mx-auto flex h-full w-full max-w-md flex-col overflow-hidden ${className}`}>{children}</div>
+    // Com o teclado aberto ela rola, mas sem barra de rolagem (ob-sem-barra).
+    <div
+      ref={caixa}
+      className={`ob-sem-barra fixed inset-x-0 overscroll-none ${teclado ? 'overflow-y-auto' : 'overflow-hidden'}`}
+      style={{ top: topo, height: visivel }}
+    >
+      {/* Do tamanho da tela já escalada: o scale não muda o tamanho que o
+          navegador usa para a rolagem. */}
+      <div className="overflow-hidden" style={{ width: largura, height: altura }}>
+        <div
+          ref={pintura}
+          className={`origin-top-left transition-colors duration-[350ms] ${classeFundo ?? (fundo ? 'text-ink' : 'bg-surface text-ink')}`}
+          style={{
+            width: largura / escala,
+            height: altura / escala,
+            transform: escala < 1 ? `scale(${escala})` : undefined,
+            background: fundo,
+          }}
+        >
+          <div className={`relative mx-auto flex h-full w-full max-w-md flex-col overflow-hidden ${className}`}>{children}</div>
+        </div>
       </div>
     </div>
   )

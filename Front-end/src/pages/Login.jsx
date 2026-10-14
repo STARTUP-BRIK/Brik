@@ -74,7 +74,7 @@ function Login() {
   return (
     <AuthLayout>
       {/* No desktop a logo já está no painel da marca, à esquerda. */}
-      <img src="/logoBrik.png" alt="Brik" className="mx-auto h-9 w-auto lg:hidden" />
+      <img src="/logoBrik.png" alt="Brik" className="logo-marca mx-auto h-9 w-auto lg:hidden" />
 
       <h1 className="mt-3.5 text-center text-base font-medium lg:-order-2 lg:mt-0 lg:text-left lg:text-2xl lg:font-bold">
         Seja bem-vindo!
