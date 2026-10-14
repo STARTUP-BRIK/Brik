@@ -3,7 +3,8 @@ name: Verificar strikes
 # Confere no OLX os anúncios que levaram strike (sumiram da raspagem completa) e
 # apaga do banco os que saíram do ar (vendidos/removidos). Os ainda no ar voltam
 # a strike 0; os inconclusivos (bloqueio) ficam pra próxima execução.
-# Sem schedule: quem dispara é o pg_cron do Supabase (job 'verificar-strikes').
+# Sem schedule: quem dispara é o pg_cron do Supabase (job 'verificar-strikes'),
+# todo dia ao meio-dia em Recife = 15h00 UTC ('0 15 * * *').
 on:
   workflow_dispatch:
 
