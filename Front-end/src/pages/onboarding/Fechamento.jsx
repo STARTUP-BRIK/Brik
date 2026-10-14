@@ -123,7 +123,7 @@ export function Conclusao() {
         </ol>
       </div>
 
-      <Botao to={proximo('plano')} seta>
+      <Botao to={proximo('plano', r)} seta>
         Escolher meu plano
       </Botao>
     </Tela>
