@@ -24,7 +24,6 @@ from selenium import webdriver
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -211,6 +210,40 @@ class SemMaisResultados(Exception):
     pass
 
 
+class BloqueioCloudflare(Exception):
+    """A página aberta é o bloqueio do Cloudflare, não o conteúdo do OLX."""
+    pass
+
+
+def bloqueado(driver) -> bool:
+    """'Attention Required!' é bloqueio, 'Just a moment...' é desafio: nos dois
+    casos o conteúdo do OLX não vem, e esperar por ele só gasta o timeout."""
+    try:
+        titulo = driver.title.lower()
+    except Exception:
+        return False
+    return 'attention required' in titulo or 'just a moment' in titulo
+
+
+def limpar_cookies(driver):
+    """O Cloudflare marca a sessão pelos cookies: limpando, a próxima página
+    costuma passar (medido nas páginas de anúncio, ver ler_json_ld)."""
+    try:
+        driver.delete_all_cookies()
+        driver.execute_cdp_cmd('Network.clearBrowserCookies', {})
+    except WebDriverException:
+        pass
+
+
+def esperar_conteudo(driver, xpath: str, timeout: int):
+    """Espera o elemento do OLX aparecer, mas desiste na hora se a página for o
+    bloqueio do Cloudflare (levanta BloqueioCloudflare)."""
+    WebDriverWait(driver, timeout).until(
+        lambda d: bloqueado(d) or d.find_elements(By.XPATH, xpath)
+    )
+    if bloqueado(driver):
+        raise BloqueioCloudflare()
+
 
 def titulo_pagina(driver) -> str:
     """Título da página aberta, pro log de falha: 'Attention Required! | Cloudflare'
@@ -232,11 +265,8 @@ def descobrir_ultima_pagina(driver) -> Optional[int]:
     o parâmetro ?o= no href e retorna o maior número encontrado.
     """
     try:
-        # Aguarda ao menos um link de paginação aparecer
-        wait = WebDriverWait(driver, 20)
-        wait.until(EC.presence_of_element_located(
-            (By.XPATH, "//a[contains(@href,'?o=') or contains(@href,'&o=')]")
-        ))
+        # Aguarda ao menos um link de paginação aparecer (ou o bloqueio)
+        esperar_conteudo(driver, "//a[contains(@href,'?o=') or contains(@href,'&o=')]", 20)
         sleep(0.5)  # pequena margem para todos os links renderizarem
 
         # ── Estratégia 1: link com texto "Última página" ──────────────────────
@@ -268,8 +298,31 @@ def descobrir_ultima_pagina(driver) -> Optional[int]:
             logger.info(f'Última página detectada pelo maior o= nos links: {ultima}')
             return ultima
 
+    except BloqueioCloudflare:
+        raise
     except Exception as e:
         logger.warning(f'Não foi possível descobrir a última página ({titulo_pagina(driver)}): {e}')
+    return None
+
+
+def descobrir_ultima_pagina_com_retry(driver, url: str) -> Optional[int]:
+    """Abre a página 1 e descobre a última página. Se o Cloudflare barrar, limpa os
+    cookies e tenta de novo com o mesmo backoff das páginas."""
+    esperas = [0] + BACKOFF_SEGUNDOS
+    for tentativa, espera in enumerate(esperas, start=1):
+        if espera:
+            logger.warning(f'Retry {tentativa - 1}/{len(BACKOFF_SEGUNDOS)} da página 1 em {espera}s '
+                           f'(cookies limpos)...')
+            sleep(espera)
+            limpar_cookies(driver)
+        try:
+            driver.get(url)
+            return descobrir_ultima_pagina(driver)
+        except BloqueioCloudflare:
+            logger.error(f'Cloudflare barrou a página 1 (tentativa {tentativa}/{len(esperas)}, '
+                         f'{titulo_pagina(driver)})')
+        except WebDriverException as e:
+            logger.error(f'Erro do WebDriver na página 1 (tentativa {tentativa}/{len(esperas)}): {e}')
     return None
 
 
@@ -278,8 +331,7 @@ def raspar_pagina(driver, condicao: str) -> list[dict]:
     if driver.find_elements(By.XPATH, "//div[contains(@class,'AdNotFound')]"):
         raise SemMaisResultados()
 
-    wait = WebDriverWait(driver, 30)
-    wait.until(EC.presence_of_element_located((By.XPATH, "//a[@class='olx-adcard__link']")))
+    esperar_conteudo(driver, "//a[@class='olx-adcard__link']", 30)
     sleep(random.uniform(1, 2))  # pequena pausa para JS terminar de renderizar
 
     titulos = driver.find_elements(By.XPATH, "//h2[contains(@class,'olx-adcard__title')]")
@@ -313,13 +365,17 @@ def raspar_pagina_com_retry(driver, url: str, condicao: str) -> Optional[list[di
 
     for tentativa, espera in enumerate(esperas, start=1):
         if espera:
-            logger.warning(f'Retry {tentativa - 1}/{len(BACKOFF_SEGUNDOS)} em {espera}s...')
+            logger.warning(f'Retry {tentativa - 1}/{len(BACKOFF_SEGUNDOS)} em {espera}s (cookies limpos)...')
             sleep(espera)
+            limpar_cookies(driver)
         try:
             driver.get(url)
             return raspar_pagina(driver, condicao)
         except SemMaisResultados:
             raise
+        except BloqueioCloudflare:
+            logger.error(f'Cloudflare barrou a página (tentativa {tentativa}/{total_tentativas}, '
+                         f'{titulo_pagina(driver)}): {url}')
         except TimeoutException:
             logger.error(f'Timeout ao carregar página (tentativa {tentativa}/{total_tentativas}, '
                          f'{titulo_pagina(driver)}): {url}')
@@ -381,8 +437,7 @@ def main():
     # ── Descobre a última página acessando a página 1 ──────────────────────────
     url_pagina1 = f'https://www.olx.com.br/{categoria["slug"]}/estado-{ESTADO}?q={BUSCA}&{condicao_qs}&o=1'
     logger.info(f'Acessando página 1 para descobrir a última página: {url_pagina1}')
-    driver.get(url_pagina1)
-    ultima_pagina = descobrir_ultima_pagina(driver)
+    ultima_pagina = descobrir_ultima_pagina_com_retry(driver, url_pagina1)
     paginacao_detectada = ultima_pagina is not None
 
     if ultima_pagina is None:
@@ -500,8 +555,7 @@ def ler_json_ld(driver, link: str) -> tuple[list[str], str]:
             # O Cloudflare deixa passar a 1ª página de anúncio da sessão e barra as
             # seguintes ("Attention Required!"), mesmo com 15s entre elas; limpando
             # os cookies antes de cada anúncio, todas passam.
-            driver.delete_all_cookies()
-            driver.execute_cdp_cmd('Network.clearBrowserCookies', {})
+            limpar_cookies(driver)
             driver.get(link)
             WebDriverWait(driver, 15).until(_pagina_anuncio_pronta)
             titulo = driver.title

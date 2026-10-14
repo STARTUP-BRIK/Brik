@@ -176,15 +176,23 @@ function canonicalizeConsole(variant) {
 // Confere se o variant descreve o console do título (rede de segurança contra
 // classificação trocada). Só olha o que o título diz explicitamente.
 // ------------------------------------------------------------------
+// Entre "ps"/"play station" e o número o anúncio pode pôr espaço, ponto ou
+// hífen ("PS-2", "PlayStation. 2"); SEP aceita até dois desses.
+const SEP = '[\\s.\\-]{0,2}';
+const PS_NOME = (n) => `(ps${SEP}${n}|play${SEP}station${SEP}${n}|play${SEP}${n})`;
+const psFamily = (n) => new RegExp(`(?<![a-z0-9])${PS_NOME(n)}(?![0-9])`);
+
 const TITLE_FAMILY = {
-    ps2: /(?<![a-z0-9])(ps\s?2|play\s?station\s?2|playstation2|play\s?2)(?![0-9])/,
-    ps3: /(?<![a-z0-9])(ps\s?3|play\s?station\s?3|playstation3|play\s?3)(?![0-9])/,
-    ps4: /(?<![a-z0-9])(ps\s?4|play\s?station\s?4|playstation4|play\s?4)(?![0-9])/,
-    ps5: /(?<![a-z0-9])(ps\s?5|play\s?station\s?5|playstation5|play\s?5)(?![0-9])/,
+    ps2: psFamily(2),
+    ps3: psFamily(3),
+    ps4: psFamily(4),
+    ps5: psFamily(5),
     xbox360: /360/,
     xboxone: /(?<![a-z])one(?![a-z])|xone/,
-    seriess: /series\s?s(?![a-z])|xss|xbox\s?s(?![a-z])|series(?!\s?x)/,
-    seriesx: /series\s?x(?![a-z])|xsx|xbox\s?x(?![a-z])/,
+    // Aceita também "série"/"serie" (sem o "s"), como muito anúncio escreve.
+    // "serie" exige espaço antes do S pra "series x" não virar "serie" + "s".
+    seriess: /series\s?s(?![a-z])|serie\s+s(?![a-z])|xss|xbox\s?s(?![a-z])|series?(?![a-z])(?!\s?x)/,
+    seriesx: /series?\s?x(?![a-z])|xsx|xbox\s?x(?![a-z])/,
 };
 
 function consoleVariantMatchesTitle(title, variant) {
@@ -211,8 +219,8 @@ function consoleVariantMatchesTitle(title, variant) {
     // O que o título afirma junto do nome do console tem que estar no variant
     // (edição especial é uma linha própria: não tem "slim"/"digital" no nome).
     if (!especial) {
-        if ((fam === 'ps4' || fam === 'ps5') && /(ps\s?[45]|play\s?station\s?[45])\s?pro(?![a-z])/.test(t) && !soltoNoVariant(/-pro-/)) return false;
-        if (ehPS && /(ps\s?[2-5]|play\s?station\s?[2-5])\s?slim/.test(t) && !soltoNoVariant(/-slim-/)) return false;
+        if ((fam === 'ps4' || fam === 'ps5') && new RegExp(`${PS_NOME('[45]')}${SEP}pro(?![a-z])`).test(t) && !soltoNoVariant(/-pro-/)) return false;
+        if (ehPS && new RegExp(`${PS_NOME('[2-5]')}${SEP}slim`).test(t) && !soltoNoVariant(/-slim-/)) return false;
         if (fam === 'ps5' && /(?<![a-z])digital(?![a-z])/.test(t) && !soltoNoVariant(/-(digital|pro)-/)) return false;
     }
 
