@@ -1,12 +1,15 @@
 import { useAuthStore } from '../stores/useAuthStore.js'
 import { PREFERENCIAS_PADRAO, usePreferenciasStore } from '../stores/usePreferenciasStore.js'
 import { useSalvosStore } from '../stores/useSalvosStore.js'
+import { carregarInteresses, salvarInteresses } from './interesses.js'
 import { supabase } from './supabase.js'
 
 // Liga os dados do usuário ao banco conforme a sessão muda (importado em
-// main.jsx). No login: carrega os ajustes (public.configuracoes) e os salvos.
-// Depois, cada mudança de ajuste é gravada. No logout: volta tudo ao padrão,
-// para a próxima conta neste navegador não herdar nada.
+// main.jsx). No login: carrega os ajustes (public.configuracoes), os salvos e o
+// que veio do onboarding: os modelos de que a pessoa quer ser avisada
+// (public.interesses_notificacao), a meta e o plano (public.preferencias).
+// Depois, cada mudança de ajuste e de modelos é gravada. No logout: volta tudo
+// ao padrão, para a próxima conta neste navegador não herdar nada.
 
 // Campo do store -> coluna de public.configuracoes.
 const COLUNAS = {
@@ -67,13 +70,64 @@ async function carregarConfiguracoes(userId) {
   gravado = JSON.stringify(paraLinha(usePreferenciasStore.getState()))
 }
 
+// --- Modelos de interesse, meta e plano (do onboarding) ------------------------
+
+// Os modelos que estão no banco (lista ordenada, em texto), para só gravar
+// quando a lista mudou de fato. null enquanto não carregou.
+let interessesGravados = null
+let timerInteresses = null
+const chaveModelos = (lista) => JSON.stringify([...lista].sort())
+
+async function gravarInteresses() {
+  const modelos = usePreferenciasStore.getState().modelosNotificacao
+  const chave = chaveModelos(modelos)
+  if (!usuario || chave === interessesGravados) return
+  const userId = usuario
+  try {
+    await salvarInteresses(userId, modelos)
+    if (usuario === userId) interessesGravados = chave
+  } catch (error) {
+    console.error('Erro ao salvar os modelos das notificações:', error.message)
+  }
+}
+
+async function carregarDoOnboarding(userId) {
+  const [prefs, modelos] = await Promise.all([
+    supabase.from('preferencias').select('meta_lucro_mensal, plano').eq('user_id', userId).maybeSingle(),
+    carregarInteresses(userId).catch((error) => {
+      console.error('Erro ao carregar os modelos das notificações:', error.message)
+      return null
+    }),
+  ])
+  if (usuario !== userId) return
+
+  const estado = {}
+  if (prefs.error) console.error('Erro ao carregar a meta e o plano:', prefs.error.message)
+  else if (prefs.data) {
+    if (prefs.data.meta_lucro_mensal != null) estado.metaMensal = Number(prefs.data.meta_lucro_mensal)
+    if (prefs.data.plano) estado.planoAtual = prefs.data.plano
+  }
+  if (modelos?.length) estado.modelosNotificacao = modelos
+  aplicandoDoBanco = true
+  usePreferenciasStore.setState(estado)
+  aplicandoDoBanco = false
+
+  if (modelos === null) return
+  interessesGravados = chaveModelos(modelos)
+  // Conta sem modelos no banco, mas com modelos neste aparelho (onboarding feito
+  // antes de a tabela existir): leva os daqui.
+  if (!modelos.length && usePreferenciasStore.getState().modelosNotificacao.length) gravarInteresses()
+}
+
 function aoMudarSessao({ session }) {
   const id = session?.user.id ?? null
   if (id === usuario) return
   const saiu = usuario !== null
   usuario = id
   gravado = null
+  interessesGravados = null
   clearTimeout(timer)
+  clearTimeout(timerInteresses)
 
   if (!id) {
     if (saiu) {
@@ -88,15 +142,22 @@ function aoMudarSessao({ session }) {
   // Fora do callback do Auth: chamar o Supabase dentro dele trava o cliente.
   setTimeout(() => {
     carregarConfiguracoes(id)
+    carregarDoOnboarding(id)
     useSalvosStore.getState().carregar()
   }, 0)
 }
 
-usePreferenciasStore.subscribe(() => {
-  if (aplicandoDoBanco || !usuario || gravado === null) return
-  // Junta mudanças seguidas (arrastar a régua de preço, por exemplo).
-  clearTimeout(timer)
-  timer = setTimeout(gravar, 600)
+usePreferenciasStore.subscribe((estado, anterior) => {
+  if (aplicandoDoBanco || !usuario) return
+  // Junta mudanças seguidas (arrastar a régua de preço, marcar vários modelos).
+  if (gravado !== null) {
+    clearTimeout(timer)
+    timer = setTimeout(gravar, 600)
+  }
+  if (interessesGravados !== null && estado.modelosNotificacao !== anterior.modelosNotificacao) {
+    clearTimeout(timerInteresses)
+    timerInteresses = setTimeout(gravarInteresses, 600)
+  }
 })
 
 aoMudarSessao(useAuthStore.getState())

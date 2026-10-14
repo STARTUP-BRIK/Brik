@@ -2,6 +2,7 @@ import { consertaValido, modelosValidos } from '../pages/onboarding/fluxo.js'
 import { useAuthStore } from '../stores/useAuthStore.js'
 import { useOnboardingStore } from '../stores/useOnboardingStore.js'
 import { usePreferenciasStore } from '../stores/usePreferenciasStore.js'
+import { salvarInteresses } from './interesses.js'
 import { supabase } from './supabase.js'
 
 // Categorias e defeito do radar viram as Configurações do Início (com conta, o
@@ -20,21 +21,13 @@ export function aplicarRadar() {
 }
 
 // Leva as respostas do onboarding (guardadas no aparelho) para a conta, no fim
-// do onboarding (tela 20). A linha em public.preferencias é o que marca o
-// onboarding como feito (é ela que a RotaProtegida consulta).
-//
-// As respostas sem lugar nas tabelas de antes (equipe, tempos, conserto, meta
-// e plano) vão numa gravação à parte: enquanto as colunas não existirem no
-// banco, ela falha sozinha e o resto segue. SQL das colunas:
-//   alter table public.preferencias
-//     add column equipe text, add column tempo_busca text,
-//     add column tempo_resposta text, add column conserta text[],
-//     add column meta_lucro_mensal numeric, add column plano text,
-//     add column cep text, add column lat double precision,
-//     add column lng double precision;
+// do onboarding (tela 20, "Começar no gratuito"). Primeiro os modelos de que a
+// pessoa quer ser avisada (public.interesses_notificacao); depois a linha em
+// public.preferencias, que é o que marca o onboarding como feito (é ela que a
+// RotaProtegida consulta). Assim, se algo falhar no meio, o onboarding não fica
+// dado como feito sem os modelos, e "Começar no gratuito" pode ser tentado de novo.
 export async function salvarOnboarding(user) {
   const r = useOnboardingStore.getState()
-  const conserta = consertaValido(r)
 
   aplicarRadar()
 
@@ -49,34 +42,27 @@ export async function salvarOnboarding(user) {
     if (error) console.error('Erro ao salvar nome e telefone:', error.message)
   }
 
-  // A linha que conta como onboarding feito. O onboarding não pergunta
-  // orçamento: vai vazio, ou 0 se a coluna não aceitar vazio.
-  const linha = {
+  await salvarInteresses(user.id, modelosValidos(r))
+
+  // O onboarding não pergunta orçamento (a coluna fica vazia).
+  const { error } = await supabase.from('preferencias').upsert({
     user_id: user.id,
     cidade: r.cidade,
     distancia_km: r.raio,
     categoria: r.categorias.length === 1 ? r.categorias[0] : null,
-  }
-  let { error } = await supabase.from('preferencias').upsert({ ...linha, orcamento: null })
-  if (error?.code === '23502') ({ error } = await supabase.from('preferencias').upsert({ ...linha, orcamento: 0 }))
+    equipe: r.equipe,
+    tempo_busca: r.tempoBusca,
+    tempo_resposta: r.tempoResposta,
+    conserta: consertaValido(r),
+    meta_lucro_mensal: r.meta > 0 ? r.meta : null,
+    plano: r.plano,
+    cep: r.cep || null,
+    // No banco, ~100 m (3 casas) bastam para o raio.
+    lat: r.lat == null ? null : Math.round(r.lat * 1000) / 1000,
+    lng: r.lng == null ? null : Math.round(r.lng * 1000) / 1000,
+  })
   if (error) throw error
 
-  const { error: extras } = await supabase
-    .from('preferencias')
-    .update({
-      equipe: r.equipe,
-      tempo_busca: r.tempoBusca,
-      tempo_resposta: r.tempoResposta,
-      conserta,
-      meta_lucro_mensal: r.meta,
-      plano: r.plano,
-      cep: r.cep || null,
-      // No banco, ~100 m (3 casas) bastam para o raio.
-      lat: r.lat == null ? null : Math.round(r.lat * 1000) / 1000,
-      lng: r.lng == null ? null : Math.round(r.lng * 1000) / 1000,
-    })
-    .eq('user_id', user.id)
-  if (extras) console.warn('Respostas do onboarding ainda sem coluna no banco:', extras.message)
-
+  usePreferenciasStore.setState({ planoAtual: r.plano })
   useAuthStore.setState({ quizRespondido: true })
 }

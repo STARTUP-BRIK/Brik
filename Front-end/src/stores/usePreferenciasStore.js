@@ -47,16 +47,18 @@ export const PREFERENCIAS_PADRAO = {
   },
 
   // Notificações: de quais modelos a pessoa quer ser avisada (ids de
-  // config/modelos.js). Vem da tela de modelos do onboarding. Fica só no
-  // aparelho por enquanto (sem coluna em public.configuracoes).
+  // config/modelos.js). Vem da tela de modelos do onboarding; na conta, fica em
+  // public.interesses_notificacao (lib/sincronizarConta.js carrega e grava).
   modelosNotificacao: [],
 
-  // Plano em que a pessoa está (config/planos.js). Sem pagamento integrado,
-  // todo mundo está no Free; a assinatura, quando existir, troca este valor.
+  // Plano em que a pessoa está (config/planos.js; na conta, preferencias.plano).
+  // Sem pagamento integrado, todo mundo está no Free; a assinatura, quando
+  // existir, troca este valor.
   planoAtual: 'gratis',
 
   // Dashboard: meta de lucro do mês, em reais. Vem do onboarding (tela 13) e o
-  // lápis do card troca. Também só no aparelho (ver lib/useMetaMensal.js).
+  // lápis do card troca. Na conta, preferencias.meta_lucro_mensal (ver
+  // lib/useMetaMensal.js).
   metaMensal: 2000,
 
   // Passos para seu primeiro Brique: índices dos passos marcados.
