@@ -47,8 +47,8 @@ const PERGUNTAS = [
     pergunta: 'Por que uma oferta sumiu do Início?',
     resposta: (
       <>
-        As ofertas são atualizadas a cada nova leitura da OLX. Quando um anúncio deixa de aparecer em
-        três leituras seguidas (vendido ou removido pelo vendedor), ele sai do Brik.
+        As ofertas são atualizadas a cada nova leitura da OLX. Quando um anúncio deixa de aparecer, o Brik
+        confere a página dele na OLX e, se ele foi vendido ou removido pelo vendedor, sai do Brik.
       </>
     ),
   },
