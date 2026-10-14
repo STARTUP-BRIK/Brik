@@ -6,12 +6,13 @@ import { Conclusao, Planos } from './Fechamento.jsx'
 import { JeitoMelhor, Rolagem, Solucao } from './Introducao.jsx'
 import { Categorias, Defeito, Meta, Modelos, Montagem, Raio } from './SeuRadar.jsx'
 import { Diagnostico, Equipe, Horas, PrimeiraProposta, Resposta08, Tempo } from './SobreVoce.jsx'
+import { PROTECAO_ATIVA } from '../../config/protecao.js'
 import { useAuthStore } from '../../stores/useAuthStore.js'
 import { caminho } from './fluxo.js'
 
 // Onboarding (o desenho está no canvas "Onboarding Brik"). Substitui o quiz:
-// começa nas boas-vindas (/boas-vindas), onde a pessoa entra ou vai para a
-// criação da conta (01a, /onboarding/cadastro). Sem conta, nenhuma outra tela abre:
+// começa na criação da conta (01a, /onboarding/cadastro), aberta pelo
+// "Cadastre-se" do login. Sem conta, nenhuma outra tela abre:
 // todas voltam para a 01a. As respostas ficam no aparelho até os planos (20),
 // que as levam para a conta. Uma rota por tela, /onboarding/:passo, para o
 // voltar do navegador funcionar.
@@ -54,8 +55,9 @@ function Onboarding() {
 
   if (!TelaAtual) return <Navigate to={caminho('cadastro')} replace />
   // Só a criação da conta abre sem sessão. Enquanto a sessão guardada é lida
-  // (inclusive na volta do login com Google), não mostra nada.
-  if (passo !== 'cadastro') {
+  // (inclusive na volta do login com Google), não mostra nada. Com a proteção
+  // desligada (config/protecao.js), tudo abre sem login, para testar o fluxo.
+  if (PROTECAO_ATIVA && passo !== 'cadastro') {
     if (carregando) return null
     if (!session) return <Navigate to={caminho('cadastro')} replace />
   }

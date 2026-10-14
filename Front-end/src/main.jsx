@@ -27,10 +27,19 @@ createRoot(document.getElementById('root')).render(
 // — se o JS demorou a chegar, não soma espera. O app já monta por baixo, então
 // os dados carregam enquanto ela está na tela.
 const SPLASH_MINIMO = 5000
+// Enquanto ela existe, o <html> tem a classe splash-ativa, que esconde a logo
+// do app (.logo-marca, no index.css): sem isso a logo do header aparecia através
+// do fade da splash, junto com a logo dela. Sai quando a splash já foi embora.
 const splash = document.getElementById('splash')
+const fimDaSplash = () => document.documentElement.classList.remove('splash-ativa')
 if (splash) {
   setTimeout(() => {
     splash.classList.add('splash-hide')
-    setTimeout(() => splash.remove(), 500)
+    setTimeout(() => {
+      splash.remove()
+      fimDaSplash()
+    }, 500)
   }, Math.max(0, SPLASH_MINIMO - performance.now()))
+} else {
+  fimDaSplash()
 }

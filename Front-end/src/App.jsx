@@ -23,7 +23,6 @@ import Configuracoes from './pages/perfil/Configuracoes.jsx'
 import Ajuda from './pages/perfil/Ajuda.jsx'
 import Termos from './pages/perfil/Termos.jsx'
 import PrimeiroBrique from './pages/perfil/PrimeiroBrique.jsx'
-import { BoasVindas } from './pages/onboarding/Abertura.jsx'
 import Onboarding from './pages/onboarding/Onboarding.jsx'
 
 const router = createBrowserRouter([
@@ -73,9 +72,11 @@ const router = createBrowserRouter([
       },
     ],
   },
-  // Onboarding: aberto, porque começa antes de existir conta (a conta é criada
-  // no fim). Substituiu o quiz; /quiz ficou só como desvio.
-  { path: '/boas-vindas', element: <BoasVindas /> },
+  // Onboarding: começa pela criação da conta (/onboarding/cadastro, aberta sem
+  // login); as outras telas pedem sessão. Substituiu o quiz; /quiz ficou só
+  // como desvio. A tela de boas-vindas saiu: o app abre no login, e o endereço
+  // antigo leva para lá.
+  { path: '/boas-vindas', element: <Navigate to="/login" replace /> },
   { path: '/onboarding/:passo', element: <Onboarding /> },
   { path: '/onboarding', element: <Navigate to="/onboarding/cadastro" replace /> },
   { path: '/quiz', element: <Navigate to="/onboarding/cadastro" replace /> },

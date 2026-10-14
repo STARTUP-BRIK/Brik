@@ -674,6 +674,18 @@ body {
   .auth-linhas { animation: none; }
 }
 
+/* Logo do app (.logo-marca) enquanto a splash está na tela (classe splash-ativa
+   no <html>, tirada pelo main.jsx): escondida, para não aparecer através do fade
+   da splash junto com a logo dela. Entra com um fade quando a splash já saiu. */
+.logo-marca {
+  transition: opacity 0.4s ease;
+}
+
+html.splash-ativa .logo-marca {
+  opacity: 0;
+  transition: none;
+}
+
 /* Transição de tela: só a logo viaja (da lateral, na Home, para o centro do header
    do Dashboard). O resto da página troca direto, sem cortina nem fade — a entrada
    do Dashboard fica por conta das bolhas abaixo. */
@@ -904,6 +916,15 @@ html.ob-travado body {
 
 html.ob-travado {
   background: var(--ob-fundo-pagina, var(--color-surface));
+}
+
+/* A tela do onboarding rola com o teclado aberto, mas sem mostrar a barra. */
+.ob-sem-barra {
+  scrollbar-width: none;
+}
+
+.ob-sem-barra::-webkit-scrollbar {
+  display: none;
 }
 
 .ob-sem-contorno:focus-visible {

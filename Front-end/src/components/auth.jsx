@@ -65,7 +65,7 @@ function PainelMarca() {
       {/* Escurece a base para a frase se ler sobre as linhas. */}
       <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-brik-dark/90 via-brik-dark/20 to-transparent" />
 
-      <img src="/logoBrik.png" alt="Brik" className="relative h-9 w-auto self-start" />
+      <img src="/logoBrik.png" alt="Brik" className="logo-marca relative h-9 w-auto self-start" />
 
       <blockquote className="relative mt-auto max-w-md space-y-3">
         <p className="text-xl leading-snug">

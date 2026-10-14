@@ -44,7 +44,7 @@ function BrandHeader({ dashboard = false, voltarPara, className = '', classeLogo
         <img
           src="/logoBrik.png"
           alt="Brik"
-          className={`h-9 w-auto ${dashboard ? '[filter:brightness(0)_opacity(0.83)] dark:[filter:none]' : ''}`}
+          className={`logo-marca h-9 w-auto ${dashboard ? '[filter:brightness(0)_opacity(0.83)] dark:[filter:none]' : ''}`}
           style={{ viewTransitionName: 'brik-logo' }}
         />
       </div>
