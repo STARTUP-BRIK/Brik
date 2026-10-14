@@ -62,7 +62,7 @@ export const muitoTempo = (r) => r.tempoBusca === 'h2' || r.tempoBusca === 'h3'
 // --- Para onde cada tela leva --------------------------------------------------
 
 // A conta é criada na 01a (cadastro): todas as telas seguintes pedem sessão.
-export function proximo(passo, r) {
+export function proximo(passo, r = {}) {
   const seguinte = {
     cadastro: 'tema',
     tema: 'rolagem',
@@ -91,7 +91,7 @@ export function proximo(passo, r) {
 }
 
 // A seta de voltar das telas que têm uma (as outras não voltam, como no canvas).
-export function anterior(passo, r) {
+export function anterior(passo, r = {}) {
   const volta = {
     cadastro: LOGIN,
     equipe: caminho('solucao'),
