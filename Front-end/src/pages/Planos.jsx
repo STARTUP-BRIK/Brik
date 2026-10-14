@@ -11,6 +11,10 @@ import { usePreferenciasStore } from '../stores/usePreferenciasStore.js'
 // mensal/anual. O Pro fica em destaque, no centro. O plano em que a pessoa está
 // leva a foto dela (ou o ícone de usuário) no canto. O pagamento ainda não está
 // ligado: os botões de assinar avisam isso em vez de fingir uma cobrança.
+//
+// `inicio`: a mesma tela como último passo do onboarding (tela 20). Aí o Free
+// vira "Começar no gratuito", que conclui o onboarding (`inicio.onGratis`), e
+// ainda não há plano atual para marcar.
 
 const reais = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })
 
@@ -62,7 +66,21 @@ function SeuPlano({ foto }) {
   )
 }
 
-function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher }) {
+// Botão de começar no gratuito (onboarding), no cartão do Free e no pé da tela.
+function BotaoGratis({ inicio, className = '', children }) {
+  return (
+    <button
+      type="button"
+      onClick={inicio.onGratis}
+      disabled={inicio.salvando}
+      className={`flex h-12 w-full items-center justify-center rounded-xl text-sm font-bold transition-[background-color,opacity] disabled:opacity-60 ${className}`}
+    >
+      {inicio.salvando ? 'Salvando…' : children}
+    </button>
+  )
+}
+
+function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher, inicio }) {
   const valor = anual ? plano.preco.anual : plano.preco.mensal
   const periodo = anual ? 'ano' : plano.periodo
   const gratis = valor === 0
@@ -120,6 +138,10 @@ function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher }) {
           <p className="flex h-12 w-full items-center justify-center rounded-xl bg-surface-raise text-sm font-bold text-ink/60">
             Seu plano atual
           </p>
+        ) : gratis && inicio ? (
+          <BotaoGratis inicio={inicio} className="border border-line text-ink hover:bg-surface-raise">
+            Começar no gratuito
+          </BotaoGratis>
         ) : gratis ? (
           <Link
             to="/"
@@ -142,7 +164,9 @@ function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher }) {
         )}
         {escolhido && (
           <p role="status" className="mt-2.5 text-center text-xs leading-snug text-ink/60">
-            O pagamento ainda não está disponível. Assim que estiver, você assina por aqui.
+            {inicio
+              ? 'O pagamento ainda não está disponível. Comece no gratuito: seu radar fica salvo e você assina quando quiser.'
+              : 'O pagamento ainda não está disponível. Assim que estiver, você assina por aqui.'}
           </p>
         )}
       </div>
@@ -150,7 +174,7 @@ function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher }) {
   )
 }
 
-function Planos() {
+function Planos({ inicio }) {
   const [anual, setAnual] = useState(false)
   const [escolhido, setEscolhido] = useState(null)
   const planoAtual = usePreferenciasStore((state) => state.planoAtual)
@@ -159,11 +183,16 @@ function Planos() {
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-surface pb-28 shadow-xl lg:max-w-none lg:pb-16 lg:shadow-none">
-      <BrandHeader />
+      {/* Fora do Layout (último passo do onboarding) não há TopBar e a logo fica
+          no header: no desktop, alinhada à coluna da página (px-5 + px-3 = px-8). */}
+      <BrandHeader classeLogo="lg:mx-auto lg:max-w-5xl lg:px-3" />
 
       <main className="px-4 pt-6 lg:mx-auto lg:max-w-5xl lg:px-8 lg:pt-12">
         <div className="text-center">
-          <h1 className="text-[28px] font-bold leading-tight tracking-tight text-ink lg:text-[40px]">Escolha seu plano</h1>
+          {inicio && <p className="mb-2 font-mono text-xs uppercase tracking-[0.18em] text-ink/50">Último passo</p>}
+          <h1 className="text-[28px] font-bold leading-tight tracking-tight text-ink lg:text-[40px]">
+            {inicio ? 'Como você quer começar?' : 'Escolha seu plano'}
+          </h1>
           <p className="mx-auto mt-2 max-w-md text-sm text-ink/60 lg:text-base">
             Comece grátis com o controle do seu brique. Assine para o radar te avisar das oportunidades antes de todo mundo.
           </p>
@@ -183,13 +212,28 @@ function Planos() {
               plano={plano}
               anual={anual}
               indice={indice}
-              atual={plano.value === planoAtual}
+              atual={!inicio && plano.value === planoAtual}
               foto={foto}
               escolhido={escolhido === plano.value}
               onEscolher={setEscolhido}
+              inicio={inicio}
             />
           ))}
         </div>
+
+        {inicio && (
+          <div className="mx-auto mt-8 max-w-sm text-center">
+            {inicio.erro && (
+              <p role="alert" className="mb-3 text-sm text-loss">
+                {inicio.erro}
+              </p>
+            )}
+            <BotaoGratis inicio={inicio} className="bg-brik text-paper hover:bg-brik-dark">
+              Prefiro começar no gratuito
+            </BotaoGratis>
+            <p className="mt-2 text-xs text-ink/50">Seu radar fica salvo. Dá para assinar um plano quando quiser.</p>
+          </div>
+        )}
 
         <p className="mt-8 text-center text-xs text-ink/50">Preços em reais. Dá para trocar ou cancelar o plano quando quiser.</p>
       </main>

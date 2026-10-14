@@ -1,21 +1,16 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { PLANOS } from '../../config/planos.js'
+import PaginaPlanos from '../Planos.jsx'
 import { PROTECAO_ATIVA } from '../../config/protecao.js'
 import { salvarOnboarding } from '../../lib/salvarOnboarding.js'
 import { useAuthStore } from '../../stores/useAuthStore.js'
 import { useOnboardingStore } from '../../stores/useOnboardingStore.js'
 import { EQUIPE, TEMPO_BUSCA, TEMPO_RESPOSTA, caminho, defeitoResumo, listaCategorias, proximo, reais, regiao } from './fluxo.js'
-import { Botao, Check, Etiqueta, Grafico, Radar, Rotulo, Tela, Xis } from './pecas.jsx'
+import { Botao, Etiqueta, Grafico, Radar, Rotulo, Tela } from './pecas.jsx'
 import { SAIDA, brilho, destaque } from './estilo.js'
 
-// 19 e 20: o plano de brique com as respostas dele e a escolha de plano, que
-// conclui o onboarding. (A conta já foi criada na 01a.)
-
-// Preço mensal do Pro (config/planos.js, o mesmo da página /planos).
-const PRECO_PRO = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-  PLANOS.find((p) => p.value === 'pro').preco.mensal,
-)
+// 19 e 20: o plano de brique com as respostas dele e a escolha de plano (a tela
+// de planos do app), que conclui o onboarding. (A conta já foi criada na 01a.)
 
 const Forte = ({ children }) => <strong className="font-bold text-ob-titulo">{children}</strong>
 
@@ -130,58 +125,24 @@ export function Conclusao() {
   )
 }
 
-// Cartão de plano, com o rádio no canto.
-function Plano({ on, onClick, children }) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={on}
-      onClick={onClick}
-      className={`relative block w-full rounded-[18px] border-[1.5px] p-[18px] text-left text-ink ${
-        on ? 'border-ob-destaque bg-ob-destaque/6' : 'border-line bg-surface-card'
-      }`}
-    >
-      <span
-        aria-hidden="true"
-        className={`absolute right-[18px] top-[18px] flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 ${
-          on ? 'border-ob-destaque' : 'border-ink/40'
-        }`}
-      >
-        <span className={`h-[11px] w-[11px] rounded-full ${on ? 'bg-ob-destaque' : ''}`} />
-      </span>
-      {children}
-    </button>
-  )
-}
-
-function Vantagem({ icone, className = '', children }) {
-  return (
-    <span className={`flex items-center gap-2 ${className}`}>
-      {icone}
-      {children}
-    </span>
-  )
-}
-
-// 20 · Escolha de plano. Sem teste grátis: o radar montado fica salvo e o
-// gratuito aparece como ferramenta completa de controle. É aqui que as
-// respostas vão para a conta e o onboarding termina.
+// 20 · Escolha de plano: a mesma tela de planos do app (pages/Planos.jsx), com
+// os três planos. "Começar no gratuito" conclui o onboarding: é aqui que as
+// respostas vão para a conta. Os planos pagos ainda não cobram (sem pagamento
+// integrado), então quem quer assinar também começa no gratuito por enquanto.
 export function Planos() {
   const navigate = useNavigate()
-  const r = useOnboardingStore()
   const session = useAuthStore((state) => state.session)
   const carregando = useAuthStore((state) => state.carregando)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
-  const pro = r.plano === 'pro'
 
   // Sem conta (aberto direto pelo endereço): volta para a criação da conta. Com a
   // proteção desligada (config/protecao.js, para testar o fluxo sem login), a
   // tela abre e o botão só leva ao feed, sem salvar nada.
   if (PROTECAO_ATIVA && !carregando && !session) return <Navigate to={caminho('cadastro')} replace />
 
-  async function comecar() {
+  async function comecarGratis() {
+    useOnboardingStore.getState().responder({ plano: 'gratis' })
     if (!session) return navigate('/', { replace: true })
     setSalvando(true)
     setErro('')
@@ -196,62 +157,5 @@ export function Planos() {
     }
   }
 
-  return (
-    <Tela className="px-5 pb-7 pt-14">
-      <Rotulo className="text-mute">Último passo</Rotulo>
-      <h1 id="planos" className="mt-2.5 text-[30px] font-bold leading-[1.12] tracking-[-0.02em] text-ob-titulo">
-        Como você quer começar?
-      </h1>
-
-      <div role="radiogroup" aria-labelledby="planos" className="mt-[22px] flex flex-col gap-3">
-        <Plano on={pro} onClick={() => r.responder({ plano: 'pro' })}>
-          <span className="flex items-center gap-2">
-            <span className="text-xl font-bold text-ob-titulo">Pro</span>
-            <span className="rounded-full bg-ob-destaque/14 px-2 py-[3px] text-xs font-medium text-ob-destaque">Radar + Dashboard</span>
-          </span>
-          <span className="mt-2.5 flex items-baseline gap-1">
-            <span className="text-[28px] font-bold tracking-[-0.02em] text-ob-titulo">{PRECO_PRO}</span>
-            <span className="text-sm text-mute">/mês</span>
-          </span>
-          <span className="mt-3.5 flex flex-col gap-2 text-sm leading-[1.35]">
-            {['O radar que você acabou de montar', 'Alertas em menos de 5 minutos', `Dashboard com a meta de ${reais(r.meta)}`].map((v) => (
-              <Vantagem key={v} icone={<Check width="16" height="16" className="shrink-0 text-ob-destaque" />}>
-                {v}
-              </Vantagem>
-            ))}
-          </span>
-        </Plano>
-
-        <Plano on={!pro} onClick={() => r.responder({ plano: 'gratis' })}>
-          <span className="flex items-center gap-2">
-            <span className="text-xl font-bold text-ob-titulo">Gratuito</span>
-            <span className="rounded-full bg-surface-raise px-2 py-[3px] text-xs font-medium text-mute">R$ 0</span>
-          </span>
-          <span className="mt-2 block text-sm text-mute">O controle completo do seu brique.</span>
-          <span className="mt-3.5 flex flex-col gap-2 text-sm leading-[1.35]">
-            <Vantagem icone={<Check width="16" height="16" className="shrink-0 text-gain" />}>Compras, vendas e lucro por aparelho</Vantagem>
-            <Vantagem icone={<Check width="16" height="16" className="shrink-0 text-gain" />}>Meta mensal de {reais(r.meta)}</Vantagem>
-            <Vantagem icone={<Xis className="shrink-0 text-mute" />} className="text-mute">
-              Sem radar e sem alertas
-            </Vantagem>
-          </span>
-        </Plano>
-      </div>
-
-      <p className="mt-3.5 flex items-start gap-2 text-[13px] leading-[1.45] text-mute">
-        <Radar width="16" height="16" className="mt-px shrink-0 text-ob-destaque" />
-        Seu radar fica salvo. Dá para assinar o Pro quando quiser.
-      </p>
-
-      {erro && (
-        <p role="alert" className="mt-3 text-[13px] text-loss">
-          {erro}
-        </p>
-      )}
-
-      <Botao onClick={comecar} disabled={salvando || (PROTECAO_ATIVA && !session)}>
-        {salvando ? 'Salvando…' : pro ? 'Assinar o Pro' : 'Começar no gratuito'}
-      </Botao>
-    </Tela>
-  )
+  return <PaginaPlanos inicio={{ onGratis: comecarGratis, salvando, erro }} />
 }
