@@ -20,6 +20,10 @@ export const RESPOSTAS_PADRAO = {
   // 10b: de quais modelos quer ser avisada (ids de config/modelos.js). Por ora
   // fica só no aparelho, não vai para o banco.
   modelos: [],
+  // 10c: de quais níveis de oportunidade quer e-mail ('boa' | 'otima' |
+  // 'extraordinaria', de config/categorias.js NIVEIS). Vira as chaves de mesmo
+  // nome em preferências.notificacoes (lib/salvarOnboarding.js).
+  niveisAlerta: ['otima', 'extraordinaria'],
   // 11: 'sim' (eu conserto) | 'alguem' (alguém da equipe conserta) | 'nao'
   defeito: 'sim',
   // 11: em quais das categorias da 10 aceita aparelho com defeito

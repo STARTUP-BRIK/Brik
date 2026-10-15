@@ -1,26 +1,20 @@
 import { Fragment, useState } from 'react'
 import { Grupo, Interruptor, Linha, Nota, SubPagina } from '../../components/SubPagina.jsx'
-import { CATEGORIAS } from '../../config/categorias.js'
+import { CATEGORIAS, NIVEIS } from '../../config/categorias.js'
 import { MODELOS, idsDaCategoria } from '../../config/modelos.js'
 import { usePreferenciasStore } from '../../stores/usePreferenciasStore.js'
 
-// Notificações. Por enquanto só guarda as escolhas: o envio dos avisos (push ou
-// e-mail) ainda não existe. Quando existir, ele lê estas mesmas chaves.
+// Notificações. Os avisos de oportunidade saem por e-mail, um por anúncio
+// (worker/notificacoes.js lê as chaves boa, otima e extraordinaria e os modelos
+// marcados abaixo). Estoque parado e novidades ainda não são enviados.
 const GRUPOS = [
   {
-    titulo: 'Oportunidades',
-    itens: [
-      {
-        key: 'oportunidades',
-        titulo: 'Novas oportunidades',
-        detalhe: 'Quando aparecer um bom negócio nas categorias que você escolheu nas Configurações.',
-      },
-      {
-        key: 'extraordinarias',
-        titulo: 'Negócios extraordinários',
-        detalhe: 'Aviso na hora para ofertas 30% ou mais abaixo do preço de mercado.',
-      },
-    ],
+    titulo: 'Oportunidades por e-mail',
+    itens: NIVEIS.map(({ value, label, desconto }) => ({
+      key: value,
+      titulo: label,
+      detalhe: `Anúncio novo ${desconto}% ou mais abaixo do preço de mercado, nos modelos que você acompanha.`,
+    })),
   },
   {
     titulo: 'Seu estoque',
@@ -165,8 +159,8 @@ function Notificacoes() {
       ))}
 
       <Nota>
-        Os avisos começam a chegar quando as notificações forem lançadas. Suas escolhas, incluindo
-        os modelos que você acompanha, já ficam salvas na sua conta.
+        Cada oportunidade chega em um e-mail separado, no endereço da sua conta. Produto parado e
+        novidades ainda não são enviados.
       </Nota>
     </SubPagina>
   )

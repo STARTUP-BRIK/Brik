@@ -38,10 +38,13 @@ export const PREFERENCIAS_PADRAO = {
   ordem: 'recentes',
   periodo: 'todos',
 
-  // Notificações: só as escolhas; os avisos ainda não são enviados.
+  // Notificações. boa/otima/extraordinaria: e-mail por oportunidade daquele
+  // nível (worker/notificacoes.js, mesmo padrão em NIVEIS_PADRAO; "bom negócio"
+  // começa desligado por ser volume alto). Os outros ainda não são enviados.
   notificacoes: {
-    oportunidades: true,
-    extraordinarias: true,
+    boa: false,
+    otima: true,
+    extraordinaria: true,
     estoqueParado: false,
     novidades: false,
   },

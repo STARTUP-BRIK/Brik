@@ -79,5 +79,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Avisos por e-mail de oportunidades (worker/notificacoes.js); sem o secret, o passo é pulado.
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           PYTHON_EXECUTABLE: python
           PYTHON_SCRIPT_PATH: ${{ github.workspace }}/scraper/app.py
