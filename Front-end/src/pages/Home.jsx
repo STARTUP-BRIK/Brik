@@ -5,10 +5,10 @@ import { usePreferenciasStore } from '../stores/usePreferenciasStore.js'
 import BrandHeader from '../components/BrandHeader.jsx'
 import ProductCard, { ProductCardSkeleton } from '../components/ProductCard.jsx'
 import { SearchIcon } from '../components/icons.jsx'
-import FiltroCidade from '../components/FiltroCidade.jsx'
+import FiltroRaio from '../components/FiltroRaio.jsx'
 import FiltroOfertas from '../components/FiltroOfertas.jsx'
 import { CATEGORIAS, NIVEIS } from '../config/categorias.js'
-import { TODAS, cidadeDe, passaNaCidade } from '../config/cidades.js'
+import { distanciaKm, pontoDaCidade, pontoDoAnuncio, useLugares } from '../lib/lugares.js'
 import { dataDoAnuncio, inicioDoPeriodo } from '../lib/postagem.js'
 
 // Posição de cada selo na escala (boa = 0), para comparar com o nível mínimo.
@@ -28,8 +28,11 @@ function Home({ desfocado = false }) {
   const nivelMinimo = usePreferenciasStore((state) => state.nivelMinimo)
   const mostrarDefeito = usePreferenciasStore((state) => state.mostrarDefeito)
   const visiveisNoFeed = CATEGORIAS.filter(({ value }) => categorias.includes(value))
-  const cidade = usePreferenciasStore((state) => state.cidade)
-  const setCidade = usePreferenciasStore((state) => state.setCidade)
+  // Raio: só os anúncios até `raio` km do ponto de partida do onboarding.
+  const raio = usePreferenciasStore((state) => state.raio)
+  const setRaio = usePreferenciasStore((state) => state.setRaio)
+  const origem = usePreferenciasStore((state) => state.origem)
+  const lugares = useLugares()
   // Botão Filtros: selos ligados, o máximo que a pessoa quer gastar e os
   // aparelhos com defeito.
   const niveis = usePreferenciasStore((state) => state.niveis)
@@ -81,9 +84,8 @@ function Home({ desfocado = false }) {
     [doConfig],
   )
 
-  // Configurações + botão Filtros. As contagens do filtro de cidade saem daqui,
-  // para o número ao lado de cada cidade bater com o que o feed mostra.
-  // Já na ordem da data do anúncio escolhida (sem data, vão para o fim).
+  // Configurações + botão Filtros, já na ordem da data do anúncio escolhida
+  // (sem data, vão para o fim).
   const doFeed = useMemo(() => {
     const desde = inicioDoPeriodo(periodo)
     const quando = (item) => {
@@ -105,22 +107,39 @@ function Home({ desfocado = false }) {
       .map(({ item }) => item)
   }, [doConfig, niveisAtivos, precoMaximo, defeitoAtivo, periodo, ordem])
 
-  // Cidades com ofertas, da que tem mais para a que tem menos.
-  const cidades = useMemo(() => {
-    const total = new Map()
+  // De onde a pessoa sai: o ponto do onboarding ou, sem ele, o centro da cidade.
+  // Sem nenhum dos dois (ou sem o mapa de lugares), o feed não filtra por raio.
+  const centro = useMemo(() => {
+    if (origem?.lat != null && origem?.lng != null) return { lat: origem.lat, lng: origem.lng }
+    return pontoDaCidade(lugares, origem?.cidade)
+  }, [origem, lugares])
+  const filtraRaio = centro !== null && lugares?.length > 0
+  // O mapa de lugares ainda carregando: espera, para o feed não piscar com tudo.
+  const esperandoLugares = Boolean(origem) && lugares === null
+
+  // Distância de cada anúncio ao ponto (só muda com o ponto e a lista, não com o
+  // raio, para arrastar a régua ficar leve). Sem local conhecido, fica de fora.
+  const distancias = useMemo(() => {
+    const km = new Map()
+    if (!filtraRaio) return km
     doFeed.forEach((item) => {
-      const nome = cidadeDe(item)
-      if (nome) total.set(nome, (total.get(nome) ?? 0) + 1)
+      const p = pontoDoAnuncio(lugares, item)
+      km.set(item.id, p ? distanciaKm(centro.lat, centro.lng, p.lat, p.lng) : Infinity)
     })
-    return [...total].map(([nome, n]) => ({ nome, total: n })).sort((a, b) => b.total - a.total)
-  }, [doFeed])
+    return km
+  }, [doFeed, filtraRaio, lugares, centro])
+
+  const noRaio = useMemo(
+    () => (filtraRaio ? doFeed.filter((item) => distancias.get(item.id) <= raio) : doFeed),
+    [doFeed, filtraRaio, distancias, raio],
+  )
 
   // Tudo menos a categoria: daqui saem o feed e a contagem de cada categoria
   // (na coluna lateral do desktop).
   const semCategoria = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return doFeed.filter((item) => passaNaCidade(item, cidade) && (!q || item.title.toLowerCase().includes(q)))
-  }, [doFeed, cidade, query])
+    return q ? noRaio.filter((item) => item.title.toLowerCase().includes(q)) : noRaio
+  }, [noRaio, query])
 
   const porCategoria = useMemo(() => {
     const total = {}
@@ -137,9 +156,11 @@ function Home({ desfocado = false }) {
 
   const filtrosOferta =
     niveisAtivos.length < permitidos.length || precoMaximo != null || defeitoAtivo !== 'todos' || periodo !== 'todos' || ordem !== 'recentes'
-  const filtering = category !== null || query.trim() !== '' || cidade !== TODAS || filtrosOferta
+  const filtering = category !== null || query.trim() !== '' || filtrosOferta
+  // Há ofertas, mas nenhuma dentro do raio.
+  const foraDoRaio = !filtering && doFeed.length > 0
   // Há ofertas, mas as Configurações (categorias, selo mínimo ou defeito) esconderam todas.
-  const escondidasPelaConfig = !filtering && items.length > 0
+  const escondidasPelaConfig = !filtering && !foraDoRaio && items.length > 0
 
   function limparFiltrosOferta() {
     setNiveis(NIVEIS.map(({ value }) => value))
@@ -152,14 +173,21 @@ function Home({ desfocado = false }) {
   function clearFilters() {
     setCategory(null)
     setQuery('')
-    setCidade(TODAS)
     limparFiltrosOferta()
   }
 
-  // Cidade e Filtros aparecem duas vezes: no header verde (celular) e na coluna
+  // Raio e Filtros aparecem duas vezes: no header verde (celular) e na coluna
   // lateral (desktop, `lateral`). Só uma das duas fica visível.
-  const filtroCidade = (lateral) => (
-    <FiltroCidade lateral={lateral} value={cidade} onChange={setCidade} cidades={cidades} total={doFeed.length} />
+  const local = [origem?.bairro, origem?.cidade].filter(Boolean).join(', ')
+  const filtroRaio = (lateral) => (
+    <FiltroRaio
+      lateral={lateral}
+      raio={raio}
+      onRaio={setRaio}
+      centro={filtraRaio ? centro : null}
+      local={local}
+      total={noRaio.length}
+    />
   )
   const filtroOfertas = (lateral) => (
     <FiltroOfertas
@@ -191,7 +219,7 @@ function Home({ desfocado = false }) {
             de ponta a ponta, com o conteúdo na mesma largura da TopBar (max-w-7xl). */}
         <div className="lg:mx-auto lg:max-w-7xl lg:px-8">
           <h1 className="mb-4 hidden text-2xl font-bold tracking-tight text-paper lg:block">Ofertas para garimpar</h1>
-          {/* Busca, e embaixo cidade e Filtros. No desktop fica só a busca: cidade,
+          {/* Busca, e embaixo raio e Filtros. No desktop fica só a busca: raio,
               Filtros e categorias vão para a coluna lateral, ao lado do feed. */}
           <div className="flex flex-col gap-3">
             <label className="flex items-center gap-3 rounded-full bg-surface-card px-5 py-3 shadow-[0_8px_20px_-8px_rgba(43,43,43,0.5)] focus-within:ring-4 focus-within:ring-white/40 lg:w-full lg:max-w-xl">
@@ -205,10 +233,10 @@ function Home({ desfocado = false }) {
                 className="w-full bg-transparent text-sm outline-none placeholder:text-ink/40"
               />
             </label>
-            {/* Cidade e Filtros lado a lado. relative: o painel dos Filtros se
+            {/* Raio e Filtros lado a lado. relative: o painel dos Filtros se
                 alinha a esta linha, não ao botão. */}
             <div className="relative flex items-center gap-2 lg:hidden">
-              {filtroCidade(false)}
+              {filtroRaio(false)}
               {filtroOfertas(false)}
             </div>
           </div>
@@ -238,7 +266,7 @@ function Home({ desfocado = false }) {
         })}
       </nav>
 
-      {/* Desktop: o feed à esquerda e, à direita, a coluna com cidade, Filtros e
+      {/* Desktop: o feed à esquerda e, à direita, a coluna com raio, Filtros e
           categorias, que acompanha a rolagem. Com um painel aberto ela pode
           passar da altura da tela: aí rola sozinha. Ela vem antes no código para
           o Tab chegar aos filtros antes de centenas de cards. */}
@@ -255,8 +283,8 @@ function Home({ desfocado = false }) {
           </div>
 
           <section className="flex flex-col gap-2">
-            <h3 className="text-[11px] font-bold uppercase tracking-wide text-mute">Cidade</h3>
-            {filtroCidade(true)}
+            <h3 className="text-[11px] font-bold uppercase tracking-wide text-mute">Raio de busca</h3>
+            {filtroRaio(true)}
           </section>
 
           <section className="flex flex-col gap-2">
@@ -309,13 +337,13 @@ function Home({ desfocado = false }) {
         </aside>
 
         <main className={`px-4 lg:min-w-0 lg:flex-1 lg:px-0 ${desfoque}`}>
-          {!loading && visible.length > 0 && (
+          {!loading && !esperandoLugares && visible.length > 0 && (
             <p className="pb-3 pt-4 text-xs text-ink/60 lg:pt-0" aria-live="polite">
               {visible.length} {visible.length === 1 ? 'oportunidade' : 'oportunidades'}
             </p>
           )}
 
-          {loading ? (
+          {loading || esperandoLugares ? (
             <ul className="mt-4 grid grid-cols-2 gap-4 lg:mt-0 xl:grid-cols-3" aria-busy="true" aria-label="Carregando ofertas">
               {Array.from({ length: 6 }, (_, i) => (
                 <li key={i}>
@@ -328,14 +356,18 @@ function Home({ desfocado = false }) {
               <p className="font-medium">
                 {filtering
                   ? 'Nenhuma oferta com esse filtro'
-                  : escondidasPelaConfig
+                  : foraDoRaio
+                    ? `Nenhuma oferta até ${raio} km`
+                    : escondidasPelaConfig
                     ? 'Nenhuma oferta com as suas Configurações'
                     : 'Ainda não há oportunidades'}
               </p>
               <p className="text-sm text-ink/60">
                 {filtering
-                  ? 'Tente outro termo, outra cidade, outro valor ou limpe os filtros.'
-                  : escondidasPelaConfig
+                  ? 'Tente outro termo, outro raio, outro valor ou limpe os filtros.'
+                  : foraDoRaio
+                    ? 'Aumente o raio de busca para ver ofertas de mais longe.'
+                    : escondidasPelaConfig
                     ? 'Ligue mais categorias, mostre selos a partir de "Bom negócio" ou mostre aparelhos com defeito.'
                     : 'As ofertas aparecem aqui assim que a próxima raspagem terminar.'}
               </p>
