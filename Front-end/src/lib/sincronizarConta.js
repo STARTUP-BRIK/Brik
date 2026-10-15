@@ -107,8 +107,14 @@ async function gravarRaio() {
 }
 
 async function carregarDoOnboarding(userId) {
-  const [prefs, modelos] = await Promise.all([
-    supabase.from('preferencias').select('meta_lucro_mensal, plano').eq('user_id', userId).maybeSingle(),
+  const [prefs, metas, modelos] = await Promise.all([
+    supabase
+      .from('preferencias')
+      .select('meta_lucro_mensal, plano, distancia_km, lat, lng, cidade')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    // À parte: se a coluna do histórico ainda não existir, a meta e o plano carregam igual.
+    supabase.from('preferencias').select('metas_mensais').eq('user_id', userId).maybeSingle(),
     carregarInteresses(userId).catch((error) => {
       console.error('Erro ao carregar os modelos das notificações:', error.message)
       return null
