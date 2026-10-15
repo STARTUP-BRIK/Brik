@@ -199,4 +199,4 @@ async function notificarAnuncios(supabase, urls) {
     console.log(`   ${enviados} aviso(s) por e-mail enviado(s) (${envios.length} previsto(s)).`);
 }
 
-module.exports = { notificarAnuncios, carregarModeloDoVariant, NIVEIS_PADRAO };
+module.exports = { notificarAnuncios, carregarModeloDoVariant, montarEmail, enviarEmail, NIVEIS_PADRAO };
