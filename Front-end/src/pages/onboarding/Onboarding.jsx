@@ -4,8 +4,8 @@ import { Nome, Tema } from './Abertura.jsx'
 import { Alerta, Dashboard, Feed, Permissao } from './Climax.jsx'
 import { Conclusao, Planos } from './Fechamento.jsx'
 import { JeitoMelhor, Rolagem, Solucao } from './Introducao.jsx'
-import { Categorias, Defeito, Meta, Modelos, Montagem, Raio } from './SeuRadar.jsx'
-import { Diagnostico, Equipe, Horas, PrimeiraProposta, Resposta08, Tempo } from './SobreVoce.jsx'
+import { Categorias, Defeito, Lucro, Meta, Modelos, Montagem, Raio } from './SeuRadar.jsx'
+import { Diagnostico, Equipe, PrimeiraProposta, Resposta08, Tempo } from './SobreVoce.jsx'
 import { PROTECAO_ATIVA } from '../../config/protecao.js'
 import { useAuthStore } from '../../stores/useAuthStore.js'
 import { caminho } from './fluxo.js'
@@ -24,7 +24,6 @@ const TELAS = {
   solucao: Solucao,
   equipe: Equipe,
   tempo: Tempo,
-  horas: Horas,
   diagnostico: Diagnostico,
   resposta: Resposta08,
   'primeira-proposta': PrimeiraProposta,
@@ -32,6 +31,7 @@ const TELAS = {
   modelos: Modelos,
   defeito: Defeito,
   raio: Raio,
+  lucro: Lucro,
   meta: Meta,
   montagem: Montagem,
   radar: Feed,

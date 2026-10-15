@@ -12,11 +12,11 @@ import {
   numero,
   proximo,
 } from './fluxo.js'
-import { Botao, Grupo, Nota, Opcoes, Pessoa, Radar, Resposta, Rotulo, Subtitulo, Tela, Titulo, Topo, Letras } from './pecas.jsx'
+import { Botao, Grupo, Opcoes, Pessoa, Radar, Resposta, Rotulo, Subtitulo, Tela, Titulo, Topo, Letras } from './pecas.jsx'
 import { SAIDA, destaque } from './estilo.js'
 
-// 04 a 09: equipe, tempo procurando, horas por semana, diagnóstico, tempo de
-// resposta e a primeira proposta. Do 05 ao 07 há três variantes, pela resposta
+// 04 a 09: equipe, tempo procurando, diagnóstico, tempo de resposta e a
+// primeira proposta. Do 05 ao 07 há três variantes, pela resposta
 // da 04: sozinho (a), equipe de 2 ou mais (b) e 1 pessoa na equipe (c, no
 // singular).
 
@@ -151,110 +151,6 @@ export function Tempo() {
 
 const DIAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']
 
-// 06 · Horas por semana. Sozinho e 1 pessoa: uma barra por dia da semana.
-// Equipe: uma barra por pessoa.
-export function Horas() {
-  const r = useOnboardingStore()
-  const h = horas(r)
-  const curto = TEMPO_BUSCA[r.tempoBusca].curto
-  const equipe = r.equipe === 'dois' || r.equipe === 'mais'
-
-  return (
-    <Pergunta passo="horas">
-      {r.equipe === 'sozinho' && <Resposta rotulo="Você">{curto} por dia, sozinho</Resposta>}
-      {r.equipe === 'um' && <Resposta rotulo="Equipe">1 pessoa, {curto} por dia</Resposta>}
-      {equipe && <Resposta rotulo="Equipe">{EQUIPE[r.equipe].resumo}, {curto} cada</Resposta>}
-
-      <p className="mt-7 flex items-baseline gap-1.5 leading-none text-ob-titulo">
-        <span className="text-[44px] font-medium text-mute">≈</span>
-        <span className="text-[108px] font-bold tracking-[-0.045em]">{horasCurtas(h.semana)}h</span>
-      </p>
-      <p className="mt-1.5 text-[22px] font-bold leading-[1.25] text-ob-titulo">
-        {equipe
-          ? 'por semana da sua equipe procurando anúncio.'
-          : r.equipe === 'um'
-            ? 'por semana da pessoa da sua equipe procurando anúncio.'
-            : 'por semana procurando anúncio.'}
-      </p>
-
-      {equipe ? (
-        <div className="mt-6">
-          <p className="mb-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-mute">
-            {numero(h.porDia)} h × 7 dias, por pessoa
-          </p>
-          {Array.from({ length: h.pessoas }, (_, i) => (
-            <div key={i} className={`flex items-center gap-2.5 ${i < h.pessoas - 1 ? 'mb-2' : ''}`}>
-              <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-raise text-ink">
-                <Pessoa width="16" height="16" />
-              </span>
-              <div className="h-3 flex-1 overflow-hidden rounded-full bg-surface-raise">
-                <div
-                  className="ob-anima h-full w-full origin-left rounded-full bg-ob-destaque"
-                  style={{ animation: `ob-enche-x .6s ${SAIDA} ${0.05 + i * 0.15}s both` }}
-                />
-              </div>
-              <span className="w-[46px] text-right font-mono text-[11px] text-mute">{numero(h.porPessoa)} h</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="mt-6">
-          <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-mute">{numero(h.porDia)} h × 7 dias</p>
-          <div aria-hidden="true" className="grid h-11 grid-cols-7 items-end gap-1.5">
-            {DIAS.map((_, i) => (
-              <span
-                key={i}
-                className="ob-anima h-full origin-bottom rounded-lg bg-ob-destaque"
-                style={{ animation: `ob-enche-y .5s ${SAIDA} ${(0.05 + i * 0.07).toFixed(2)}s both` }}
-              />
-            ))}
-          </div>
-          <div aria-hidden="true" className="mt-1.5 grid grid-cols-7 gap-1.5 text-center font-mono text-[10px] text-mute">
-            {DIAS.map((dia, i) => (
-              <span key={i}>{dia}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {equipe ? (
-        <div className="mt-[22px] rounded-2xl border border-line bg-surface-card p-4">
-          <p className="text-[15px] leading-[1.45]">
-            No mês, são cerca de <strong className="font-bold text-ob-titulo">{h.mes} horas de equipe</strong> rolando anúncio,{' '}
-            <strong className="font-bold text-ob-destaque">em vez de negociando.</strong>
-          </p>
-        </div>
-      ) : (
-        <div className="mt-6 rounded-2xl border border-line bg-surface-card p-4">
-          <p className="text-[15px] leading-[1.45]">
-            No mês, são cerca de <strong className="font-bold text-ob-titulo">{h.mes} horas</strong>. Mais que uma semana inteira de
-            trabalho, só procurando.
-          </p>
-          <p className="mt-3 border-t border-line pt-3 text-[15px] leading-[1.45]">
-            {r.equipe === 'um' ? (
-              <>
-                Esse tempo poderia ir para negociar. <strong className="font-bold text-ob-destaque">Hoje vai para rolar anúncio.</strong>
-              </>
-            ) : (
-              <>
-                Quem tem equipe divide essa busca. <strong className="font-bold text-ob-destaque">Você carrega ela inteira.</strong>
-              </>
-            )}
-          </p>
-        </div>
-      )}
-
-      <Nota>
-        {equipe
-          ? `Estimativa: ${h.pessoas} pessoas × ${numero(h.porDia)} h por dia × 7 dias.`
-          : 'Estimativa feita a partir das suas respostas.'}
-      </Nota>
-
-      <Botao to={proximo('horas', r)}>Continuar</Botao>
-    </Pergunta>
-  )
-}
-
 // Quanto tempo a tela "Hoje" fica antes de dar lugar à "Com o Brik" (o
 // suficiente para ler tudo com calma), e quanto dura a saída dela.
 const TEMPO_HOJE = 10000
@@ -266,8 +162,9 @@ const DIAS_X = [25, 75, 125, 175, 225, 275, 325]
 const ramo = (x) => `M${x} 76C${x} 40 175 52 175 22V0`
 
 // Ordem da tela "Hoje" (segundos): o título, as bolinhas dos dias uma a uma,
-// os tracinhos subindo todos juntos e puxando o total da semana, e o resto.
-const T = { titulo: 0.1, dias: 0.7, tracos: 2.4, total: 3.05, frase: 3.9, topicos: 4.6 }
+// os tracinhos subindo todos juntos e puxando o total da semana, o resto e,
+// por último, o balão do mês.
+const T = { titulo: 0.1, dias: 0.7, tracos: 2.4, total: 3.05, frase: 3.9, topicos: 4.6, mes: 6.2 }
 
 // Entrada devagar de cada parte, uma depois da outra.
 const devagar = (atraso, duracao = '.8s') => ({ animation: `ob-sobe-10 ${duracao} ${SAIDA} ${atraso}s both` })
@@ -275,7 +172,7 @@ const devagar = (atraso, duracao = '.8s') => ({ animation: `ob-sobe-10 ${duracao
 // "Hoje": o tempo da semana rolando anúncio, espalhado pelos sete dias, e o
 // que fica para depois. Entra na ordem de T: primeiro só "Hoje", depois os
 // dias, os tracinhos puxando o total da semana e, por fim, o resto.
-function Hoje({ quem, Icone, semana, porDia, saindo }) {
+function Hoje({ quem, Icone, semana, porDia, mes, equipe, saindo }) {
   return (
     <div
       className="ob-anima flex flex-1 flex-col"
@@ -344,6 +241,13 @@ function Hoje({ quem, Icone, semana, porDia, saindo }) {
           </li>
         ))}
       </ul>
+
+      <div className="ob-anima mt-6 rounded-2xl border border-line bg-surface-card p-4" style={devagar(T.mes)}>
+        <p className="text-[15px] leading-[1.45]">
+          No mês, são cerca de <strong className="font-bold text-ob-titulo">{mes} horas{equipe ? ' de equipe' : ''}</strong> rolando anúncio,{' '}
+          <strong className="font-bold text-ob-destaque">em vez de negociando.</strong>
+        </p>
+      </div>
     </div>
   )
 }
@@ -457,6 +361,8 @@ export function Diagnostico() {
           Icone={Icone}
           semana={horasCurtas(h.semana)}
           porDia={numero(h.semana / 7)}
+          mes={h.mes}
+          equipe={!sozinho && !um}
           saindo={fase === 'saindo'}
         />
       )}

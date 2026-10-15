@@ -42,6 +42,20 @@ function intervalos(periodo, hoje) {
 
 const dentro = (data, inicio, fim) => data >= inicio && data < fim
 
+// Linha da meta no gráfico de lucro: sai do zero e soma, dia a dia, a meta do
+// mês daquele dia dividida pelos dias do mês. Cada mês anda no ritmo da meta
+// que tinha (`metaEm(data)`), então subir a meta agora não muda os meses que passaram.
+export function linhaDaMeta(nome, metaEm, hoje = new Date()) {
+  let total = 0
+  return intervalos(nome, hoje).map(({ inicio, fim }) => {
+    for (let dia = new Date(inicio); dia < fim; dia.setDate(dia.getDate() + 1)) {
+      const diasNoMes = new Date(dia.getFullYear(), dia.getMonth() + 1, 0).getDate()
+      total += (metaEm(dia) ?? 0) / diasNoMes
+    }
+    return Math.round(total)
+  })
+}
+
 // Lucro acumulado das vendas e investimento acumulado das compras, ponto a
 // ponto, comparando o total com o período anterior de mesmo tamanho.
 function periodo(nome, hoje, vendas, compras) {

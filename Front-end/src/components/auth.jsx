@@ -81,7 +81,7 @@ function PainelMarca() {
 // 36 curvas paralelas que atravessam o painel; as duas direções se cruzam. O
 // desenho é estático: quem se mexe é o SVG inteiro (.auth-linhas, só transform
 // e opacity), que a GPU anima sem redesenhar as linhas a cada quadro.
-function LinhasFlutuantes({ direcao }) {
+export function LinhasFlutuantes({ direcao }) {
   const linhas = Array.from({ length: 36 }, (_, i) => {
     const x = (n) => n - i * 5 * direcao
     return {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PencilIcon } from '../icons.jsx'
 import { formatBRL, formatInt } from '../../lib/format.js'
+import FormMeta from './FormMeta.jsx'
 import { useReveal } from './reveal.js'
 import { Card, Eyebrow, Masked } from './ui.jsx'
 
@@ -10,23 +11,9 @@ import { Card, Eyebrow, Masked } from './ui.jsx'
 function MetaDoMes({ step, meta, onMeta, lucro, mes }) {
   const reveal = useReveal(step)
   const [editando, setEditando] = useState(false)
-  const [rascunho, setRascunho] = useState('')
   const pct = meta > 0 ? Math.max(0, Math.round((lucro / meta) * 100)) : 0
   const falta = meta - lucro
   const batida = meta > 0 && lucro >= meta
-  const novo = Number(rascunho.replace(/\D/g, ''))
-
-  function editar() {
-    setRascunho(formatInt(meta))
-    setEditando(true)
-  }
-
-  function salvar(event) {
-    event.preventDefault()
-    if (!(novo > 0)) return
-    onMeta(novo)
-    setEditando(false)
-  }
 
   return (
     <Card {...reveal(0, 'p-5')} aria-labelledby="meta-titulo">
@@ -39,7 +26,7 @@ function MetaDoMes({ step, meta, onMeta, lucro, mes }) {
             {!editando && (
               <button
                 type="button"
-                onClick={editar}
+                onClick={() => setEditando(true)}
                 aria-label="Editar a meta"
                 title="Editar a meta"
                 className="-my-2 flex h-8 w-8 items-center justify-center rounded-lg text-mute transition-colors hover:bg-surface-raise hover:text-strong"
@@ -50,39 +37,15 @@ function MetaDoMes({ step, meta, onMeta, lucro, mes }) {
           </div>
 
           {editando ? (
-            // Enter salva; Esc ou Cancelar volta sem mudar.
-            <form onSubmit={salvar} onKeyDown={(event) => event.key === 'Escape' && setEditando(false)} className="mt-3">
-              <label className="flex items-center gap-2 rounded-xl border border-line bg-surface-card px-3 py-2 focus-within:border-strong">
-                <span className="text-sm font-medium text-mute">R$</span>
-                <input
-                  autoFocus
-                  inputMode="numeric"
-                  aria-label="Meta de lucro do mês, em reais"
-                  value={rascunho}
-                  onChange={(event) => {
-                    const digitos = event.target.value.replace(/\D/g, '').slice(0, 7)
-                    setRascunho(digitos ? formatInt(Number(digitos)) : '')
-                  }}
-                  className="min-w-0 flex-1 bg-transparent text-xl font-bold text-strong outline-none"
-                />
-              </label>
-              <div className="mt-2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditando(false)}
-                  className="rounded-lg border border-line px-3.5 py-1.5 text-sm font-medium text-strong transition-colors hover:bg-surface-raise"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={!(novo > 0)}
-                  className="rounded-lg bg-strong px-3.5 py-1.5 text-sm font-bold text-surface transition-opacity hover:opacity-90 disabled:opacity-40"
-                >
-                  Salvar meta
-                </button>
-              </div>
-            </form>
+            <FormMeta
+              inicial={meta}
+              onSalvar={(valor) => {
+                onMeta(valor)
+                setEditando(false)
+              }}
+              onCancelar={() => setEditando(false)}
+              className="mt-3"
+            />
           ) : (
             <p {...reveal(2, 'mt-3 flex flex-wrap items-baseline gap-x-1.5')}>
               <span className="text-[28px] font-bold leading-none tracking-tight">

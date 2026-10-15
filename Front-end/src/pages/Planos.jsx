@@ -14,7 +14,8 @@ import { usePreferenciasStore } from '../stores/usePreferenciasStore.js'
 //
 // `inicio`: a mesma tela como último passo do onboarding (tela 20). Aí o Free
 // vira "Começar no gratuito", que conclui o onboarding (`inicio.onGratis`), e
-// ainda não há plano atual para marcar.
+// ainda não há plano atual para marcar. `inicio.chamada`: o que vem logo abaixo
+// do título (o valor das horas de busca contra o preço do Pro).
 
 const reais = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })
 
@@ -202,6 +203,7 @@ function Planos({ inicio }) {
           <p className="mx-auto mt-2 max-w-md text-sm text-ink/60 lg:text-base">
             Comece grátis com o controle do seu brique. Assine para o radar te avisar das oportunidades antes de todo mundo.
           </p>
+          {inicio?.chamada}
         </div>
 
         <div className="mt-6">

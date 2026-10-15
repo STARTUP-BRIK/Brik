@@ -58,8 +58,11 @@ export const PREFERENCIAS_PADRAO = {
 
   // Dashboard: meta de lucro do mês, em reais. Vem do onboarding (tela 13) e o
   // lápis do card troca. Na conta, preferencias.meta_lucro_mensal (ver
-  // lib/useMetaMensal.js).
-  metaMensal: 2000,
+  // lib/useMetaMensal.js). Sem meta (null), o dashboard pede para definir.
+  metaMensal: null,
+  // Histórico da meta, { 'AAAA-MM': valor }: cada mês é medido pela meta que
+  // tinha (ver metaDoMes em lib/useMetaMensal.js). Na conta, preferencias.metas_mensais.
+  metasMensais: {},
 
   // Passos para seu primeiro Brique: índices dos passos marcados.
   passosFeitos: [],

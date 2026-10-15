@@ -36,6 +36,10 @@ export const RESPOSTAS_PADRAO = {
   cidade: '',
   uf: '',
   raio: 15,
+  // 12b: lucro médio por mês hoje, em reais (0 = ainda está começando). Junto
+  // com o tempo da 05, dá quanto vale cada hora de busca (tela de planos). Por
+  // ora fica só no aparelho, não vai para o banco.
+  lucroAtual: 1000,
   // 13: meta de lucro por mês, em reais
   meta: 2000,
   // 20: 'pro' | 'gratis'

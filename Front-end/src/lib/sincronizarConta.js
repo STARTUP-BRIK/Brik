@@ -92,8 +92,10 @@ async function gravarInteresses() {
 }
 
 async function carregarDoOnboarding(userId) {
-  const [prefs, modelos] = await Promise.all([
+  const [prefs, metas, modelos] = await Promise.all([
     supabase.from('preferencias').select('meta_lucro_mensal, plano').eq('user_id', userId).maybeSingle(),
+    // À parte: se a coluna do histórico ainda não existir, a meta e o plano carregam igual.
+    supabase.from('preferencias').select('metas_mensais').eq('user_id', userId).maybeSingle(),
     carregarInteresses(userId).catch((error) => {
       console.error('Erro ao carregar os modelos das notificações:', error.message)
       return null
@@ -104,9 +106,12 @@ async function carregarDoOnboarding(userId) {
   const estado = {}
   if (prefs.error) console.error('Erro ao carregar a meta e o plano:', prefs.error.message)
   else if (prefs.data) {
-    if (prefs.data.meta_lucro_mensal != null) estado.metaMensal = Number(prefs.data.meta_lucro_mensal)
+    // A conta manda: sem meta nela, o dashboard pede uma (e não fica um valor
+    // antigo deste aparelho).
+    estado.metaMensal = prefs.data.meta_lucro_mensal != null ? Number(prefs.data.meta_lucro_mensal) : null
     if (prefs.data.plano) estado.planoAtual = prefs.data.plano
   }
+  if (metas.data?.metas_mensais) estado.metasMensais = metas.data.metas_mensais
   if (modelos?.length) estado.modelosNotificacao = modelos
   aplicandoDoBanco = true
   usePreferenciasStore.setState(estado)

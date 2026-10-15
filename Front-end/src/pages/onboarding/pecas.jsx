@@ -1,10 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { LinhasFlutuantes } from '../../components/auth.jsx'
+import { ETAPAS } from './fluxo.js'
 
 // Peças das telas do onboarding, desenhadas como no canvas (390 × 844). No
-// celular a tela ocupa tudo; no desktop vira uma coluna no meio, com o fundo
-// esticado até as bordas. As cores vêm dos tokens do index.css (surface, ink,
-// mute, line e os ob-*), que já trocam no modo escuro.
+// celular a tela ocupa tudo; no desktop ela se divide como o login: o painel
+// da marca à esquerda, com as etapas, e a tela numa coluna à direita. As cores
+// vêm dos tokens do index.css (surface, ink, mute, line e os ob-*), que já
+// trocam no modo escuro.
 
 // --- Ícones (os traços do canvas) ---------------------------------------------
 
@@ -300,19 +303,87 @@ export function Tela({ fundo, classeFundo, className = '', children }) {
           navegador usa para a rolagem. */}
       <div className="overflow-hidden" style={{ width: largura, height: altura }}>
         <div
-          ref={pintura}
-          className={`origin-top-left transition-colors duration-[350ms] ${classeFundo ?? (fundo ? 'text-ink' : 'bg-surface text-ink')}`}
+          className="relative flex origin-top-left"
           style={{
             width: largura / escala,
             height: altura / escala,
             transform: escala < 1 ? `scale(${escala})` : undefined,
-            background: fundo,
           }}
         >
-          <div className={`relative mx-auto flex h-full w-full max-w-md flex-col overflow-hidden ${className}`}>{children}</div>
+          {/* No computador a tela se divide como no login: o painel da marca à
+              esquerda, com as etapas, e a tela à direita, com o fundo dela e a
+              coluna no meio. No celular só existe a parte da direita. */}
+          <PainelEtapas />
+          <div
+            ref={pintura}
+            className={`relative flex min-w-0 flex-1 flex-col transition-colors duration-[350ms] ${classeFundo ?? (fundo ? 'text-ink' : 'bg-surface text-ink')}`}
+            style={{ background: fundo }}
+          >
+            <div
+              className={`ob-coluna relative mx-auto flex h-full w-full max-w-md flex-col overflow-hidden lg:my-auto lg:h-[844px] lg:max-w-none lg:px-16 xl:px-20 ${className}`}
+            >
+              {children}
+            </div>
+          </div>
         </div>
       </div>
     </div>
+  )
+}
+
+// Painel da esquerda no computador: o mesmo fundo verde e as linhas do login,
+// a logo e as etapas do onboarding, com a atual em destaque e as já feitas com
+// o check. Fica sempre no verde, nos dois temas.
+function PainelEtapas() {
+  const { passo } = useParams()
+  const atual = ETAPAS.findIndex((etapa) => etapa.passos.includes(passo))
+  return (
+    <aside className="tema-claro login-bg relative hidden w-[40%] max-w-[600px] shrink-0 flex-col overflow-hidden px-12 py-10 text-paper lg:flex">
+      <div aria-hidden="true" className="absolute inset-0 text-mint [contain:strict]">
+        <LinhasFlutuantes direcao={1} />
+        <LinhasFlutuantes direcao={-1} />
+      </div>
+      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-brik-dark/90 via-brik-dark/30 to-transparent" />
+
+      <img src="/logoBrik.png" alt="Brik" className="logo-marca relative h-9 w-auto self-start" />
+
+      <ol className="relative my-auto flex flex-col">
+        {ETAPAS.map((etapa, i) => {
+          const feita = i < atual
+          const agora = i === atual
+          return (
+            <li key={etapa.titulo} aria-current={agora ? 'step' : undefined} className="relative flex gap-4 pb-8 last:pb-0">
+              {/* Linha que liga uma etapa à seguinte. */}
+              {i < ETAPAS.length - 1 && (
+                <span aria-hidden="true" className={`absolute left-[15px] top-9 bottom-1 w-px ${feita ? 'bg-mint' : 'bg-paper/20'}`} />
+              )}
+              <span
+                aria-hidden="true"
+                className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-[1.5px] font-mono text-xs ${
+                  feita
+                    ? 'border-mint bg-mint text-brik'
+                    : agora
+                      ? 'border-paper bg-paper text-brik'
+                      : 'border-paper/40 bg-brik-dark/60 text-paper/70'
+                }`}
+              >
+                {feita ? <Check largura={3} /> : i + 1}
+              </span>
+              <div className="pt-1">
+                <p className={`text-lg font-bold leading-tight ${agora ? 'text-paper' : feita ? 'text-paper/80' : 'text-paper/60'}`}>
+                  {etapa.titulo}
+                </p>
+                {agora && <p className="mt-1.5 max-w-xs text-sm leading-relaxed text-paper/75">{etapa.texto}</p>}
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+
+      <p className="relative max-w-sm text-sm leading-relaxed text-paper/70">
+        Garimpamos a OLX e mostramos só o que está abaixo do preço de mercado.
+      </p>
+    </aside>
   )
 }
 
@@ -361,14 +432,14 @@ export function Rotulo({ className = 'mt-7 text-mute', children }) {
 
 export function Titulo({ id, className = 'mt-3', children }) {
   return (
-    <h1 id={id} className={`text-[28px] font-bold leading-[1.15] tracking-[-0.015em] text-ob-titulo ${className}`}>
+    <h1 id={id} className={`text-[28px] font-bold leading-[1.15] tracking-[-0.015em] text-ob-titulo lg:text-[36px] ${className}`}>
       {children}
     </h1>
   )
 }
 
 export function Subtitulo({ className = 'mt-2.5', children }) {
-  return <p className={`text-[15px] leading-[1.45] text-mute ${className}`}>{children}</p>
+  return <p className={`text-[15px] leading-[1.45] text-mute lg:text-base ${className}`}>{children}</p>
 }
 
 // Bolinha do rádio: aro e miolo no destaque quando marcada.
