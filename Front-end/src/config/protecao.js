@@ -3,4 +3,4 @@
 // Desligada durante o desenvolvimento, para navegar pelas telas, e pelo
 // onboarding inteiro, sem login. Mesmo desligada, uma conta logada que ainda
 // não fez o onboarding é levada a ele. Voltar para true antes de publicar o site.
-export const PROTECAO_ATIVA = true
+export const PROTECAO_ATIVA = false
