@@ -32,6 +32,7 @@ const {
     withScrapeCondition,
 } = require('./produtos');
 const { defeitoNoTitulo, mantemDefeituosos, planHistory, capOpportunityLevelDefeituoso } = require('./defeito');
+const { notificarAnuncios } = require('./notificacoes');
 const {
     profitPct,
     descriptionFromJsonLd,
@@ -838,6 +839,7 @@ async function processValidItems(validItems, category, mediaMap) {
     const anunciosRows = [];
     const historicoRows = [];
     const reclassified = []; // mesma URL, variant/condition novos: o histórico acompanha
+    const paraAvisar = []; // oportunidade nova ou que mudou de preço: candidata a aviso por e-mail
     const purgeHistoryUrls = []; // anúncio que passou a ter defeito: sai da base das médias
 
     for (const item of dedupedItems) {
@@ -945,6 +947,7 @@ async function processValidItems(validItems, category, mediaMap) {
         }
 
         anunciosRows.push(anuncioRow);
+        if ((isNew || priceChanged) && opportunityLevel !== 'nenhuma') paraAvisar.push(item.url);
     }
 
     if (anunciosRows.length > 0) {
@@ -998,7 +1001,7 @@ async function processValidItems(validItems, category, mediaMap) {
         console.log(`  ${reclassified.length} anúncio(s) reclassificado(s): histórico de preços acompanhou a nova variante.`);
     }
 
-    return dedupedItems.map((item) => item.url);
+    return { urls: dedupedItems.map((item) => item.url), paraAvisar };
 }
 
 // Extrai o ID numérico do anúncio a partir da URL canônica (/vi/<id>).
@@ -1539,11 +1542,22 @@ async function processProduct(category, rawItemsRaw, condition, defeitoUrls = []
         const mediaMap = await getMediaCache(validItems);
 
         console.log('5. Gravando em anuncios_ativos e historico_precos...');
-        await processValidItems(validItems, category, mediaMap);
+        const { paraAvisar } = await processValidItems(validItems, category, mediaMap);
 
         if (VERIFY_DESCRIPTIONS) {
             console.log('5b. Verificando descrição dos anúncios do feed...');
             await verifyFeedDescriptions(category, leituraDescricao);
+        }
+
+        // Depois do 5b, que pode rebaixar ou tirar anúncio do feed. Aviso que
+        // falha não derruba a raspagem: os anúncios já estão gravados.
+        if (paraAvisar.length > 0) {
+            console.log(`5c. Avisando por e-mail (${paraAvisar.length} oportunidade(s) nova(s) ou com preço novo)...`);
+            try {
+                await notificarAnuncios(supabase, paraAvisar);
+            } catch (err) {
+                console.warn(`   ⚠ Avisos por e-mail falharam: ${err.message}`);
+            }
         }
     }
 

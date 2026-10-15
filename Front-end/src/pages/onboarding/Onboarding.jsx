@@ -4,7 +4,7 @@ import { Nome, Tema } from './Abertura.jsx'
 import { Alerta, Dashboard, Feed, Permissao } from './Climax.jsx'
 import { Conclusao, Planos } from './Fechamento.jsx'
 import { JeitoMelhor, Rolagem, Solucao } from './Introducao.jsx'
-import { Categorias, Defeito, Meta, Modelos, Montagem, Raio } from './SeuRadar.jsx'
+import { Categorias, Defeito, Meta, Modelos, Montagem, Oportunidade, Raio } from './SeuRadar.jsx'
 import { Diagnostico, Equipe, Horas, PrimeiraProposta, Resposta08, Tempo } from './SobreVoce.jsx'
 import { PROTECAO_ATIVA } from '../../config/protecao.js'
 import { useAuthStore } from '../../stores/useAuthStore.js'
@@ -30,6 +30,7 @@ const TELAS = {
   'primeira-proposta': PrimeiraProposta,
   categorias: Categorias,
   modelos: Modelos,
+  oportunidade: Oportunidade,
   defeito: Defeito,
   raio: Raio,
   meta: Meta,

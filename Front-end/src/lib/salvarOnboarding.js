@@ -1,3 +1,4 @@
+import { NIVEIS } from '../config/categorias.js'
 import { consertaValido, modelosValidos } from '../pages/onboarding/fluxo.js'
 import { useAuthStore } from '../stores/useAuthStore.js'
 import { useOnboardingStore } from '../stores/useOnboardingStore.js'
@@ -9,15 +10,20 @@ import { supabase } from './supabase.js'
 // sincronizarConta grava em public.configuracoes). Antes do feed real (15), para
 // ele já abrir filtrado pelo radar, e de novo no fim. Os modelos (10b) e a meta
 // (13) vão junto: as respostas do onboarding são apagadas no fim, e é das
-// preferências que as Notificações e o card da meta do Dashboard leem.
+// preferências que as Notificações e o card da meta do Dashboard leem. Os
+// níveis de oportunidade (10c) ligam ou desligam os e-mails de cada nível.
 export function aplicarRadar() {
   const r = useOnboardingStore.getState()
-  usePreferenciasStore.setState({
+  usePreferenciasStore.setState(({ notificacoes }) => ({
     categorias: r.categorias,
     mostrarDefeito: consertaValido(r).length > 0,
     modelosNotificacao: modelosValidos(r),
     metaMensal: r.meta,
-  })
+    notificacoes: {
+      ...notificacoes,
+      ...Object.fromEntries(NIVEIS.map(({ value }) => [value, r.niveisAlerta.includes(value)])),
+    },
+  }))
 }
 
 // Leva as respostas do onboarding (guardadas no aparelho) para a conta, no fim
