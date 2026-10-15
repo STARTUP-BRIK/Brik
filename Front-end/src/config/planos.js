@@ -10,8 +10,9 @@
 // Acesso: quem decide é o banco, não a tela. O feed vem de ofertas_feed(), que
 // filtra pelo plano em public.preferencias.plano (só o servidor troca esse
 // valor). No Free, só "bom negócio" com lucro abaixo de LUCRO_MAXIMO_FREE; o
-// verificador de IMEI é só dos pagos. Mudou a regra? Mudar também no banco
-// (ofertas_liberadas) e no worker (notificacoes.js).
+// verificador de IMEI e os avisos de oportunidade por e-mail (worker/
+// notificacoes.js) são só dos pagos. Mudou a regra? Mudar também no banco
+// (ofertas_liberadas) e no worker.
 
 export const LUCRO_MAXIMO_FREE = 100
 
