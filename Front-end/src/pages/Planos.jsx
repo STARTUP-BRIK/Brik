@@ -35,7 +35,7 @@ function Cobranca({ anual, onChange }) {
   return (
     <div role="radiogroup" aria-label="Cobrança" className="mx-auto grid w-full max-w-xs grid-cols-2 gap-1 rounded-full bg-surface-raise p-1">
       {[
-        { valor: false, label: 'Mensal' },
+        { valor: false, label: 'Mensal/Semanal' },
         { valor: true, label: 'Anual' },
       ].map(({ valor, label }) => {
         const on = anual === valor
@@ -97,11 +97,10 @@ function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher, inic
   return (
     <article
       aria-labelledby={`plano-${plano.value}`}
-      className={`ob-anima relative flex flex-col rounded-3xl bg-surface-card p-6 ${
-        plano.popular
-          ? 'shadow-[0_24px_48px_-24px_rgba(15,76,92,0.55)] ring-2 ring-brik lg:-translate-y-3'
-          : 'ring-1 ring-line'
-      }`}
+      className={`ob-anima relative flex flex-col rounded-3xl bg-surface-card p-6 ${plano.popular
+        ? 'shadow-[0_24px_48px_-24px_rgba(15,76,92,0.55)] ring-2 ring-brik lg:-translate-y-3'
+        : 'ring-1 ring-line'
+        }`}
       style={{ animation: `ob-sobe-20 .6s cubic-bezier(.22,1,.36,1) ${0.1 + indice * 0.12}s both` }}
     >
       {atual && <SeuPlano foto={foto} />}
@@ -120,7 +119,7 @@ function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher, inic
       <p className="mt-5 flex items-baseline gap-1.5">
         {/* key: o preço entra de novo ao trocar mensal/anual. */}
         <span key={`${anual}`} className="ob-anima text-[40px] font-bold leading-none tracking-tight text-ink" style={{ animation: 'ob-sobe-8 .3s ease-out both' }}>
-          {definido ? (gratis ? 'R$ 0' : reais.format(valor)) : 'A definir'}
+          {definido ? (gratis ? 'R$ 0' : reais.format(valor)) : 'Indisponível'}
         </span>
         {definido && !gratis && <span className="text-sm font-medium text-ink/55">/ {periodo}</span>}
       </p>
@@ -161,11 +160,10 @@ function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher, inic
             type="button"
             disabled={!definido}
             onClick={() => onEscolher(plano.value)}
-            className={`h-12 w-full rounded-xl text-sm font-bold transition-[background-color,opacity] disabled:cursor-not-allowed disabled:opacity-45 ${
-              plano.popular ? 'bg-brik text-paper hover:bg-brik-dark' : 'bg-ink text-surface hover:opacity-90'
-            }`}
+            className={`h-12 w-full rounded-xl text-sm font-bold transition-[background-color,opacity] disabled:cursor-not-allowed disabled:opacity-45 ${plano.popular ? 'bg-brik text-paper hover:bg-brik-dark' : 'bg-ink text-surface hover:opacity-90'
+              }`}
           >
-            {definido ? `Assinar o ${plano.nome}` : 'Em breve'}
+            {definido ? `Assinar o ${plano.nome}` : 'Indisponível'}
           </button>
         )}
         {escolhido && (

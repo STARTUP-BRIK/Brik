@@ -6,6 +6,16 @@
 // publicar, principalmente as do Intermedium.
 //
 // A ordem é a da tela: o Pro, mais popular, fica no centro.
+//
+// Acesso: quem decide é o banco, não a tela. O feed vem de ofertas_feed(), que
+// filtra pelo plano em public.preferencias.plano (só o servidor troca esse
+// valor). No Free, só "bom negócio" com lucro abaixo de LUCRO_MAXIMO_FREE; o
+// verificador de IMEI é só dos pagos. Mudou a regra? Mudar também no banco
+// (ofertas_liberadas) e no worker (notificacoes.js).
+
+export const LUCRO_MAXIMO_FREE = 100
+
+export const planoPago = (plano) => plano === 'pro' || plano === 'intermedium'
 
 export const PLANOS = [
   {
@@ -18,35 +28,38 @@ export const PLANOS = [
       { texto: 'Estoque, compras e vendas por aparelho' },
       { texto: 'Dashboard com lucro e meta do mês' },
       { texto: 'Calculadora de brique' },
-      { texto: 'Sem radar de oportunidades', fora: true },
+      { texto: 'Radar demonstrativo com baixas oportunidades' },
       { texto: 'Sem alertas', fora: true },
+      { texto: 'Verificador de IMEI', fora: true },
     ],
   },
   {
     value: 'pro',
     nome: 'Pro',
     resumo: 'Para quem vive de brique.',
-    preco: { mensal: 37.9, anual: null },
+    preco: { mensal: 37.9, anual: 439.90 },
     periodo: 'mês',
     popular: true,
     vantagens: [
-      { texto: 'Tudo do Intermedium' },
-      { texto: 'Alertas em menos de 5 minutos' },
+      { texto: 'Todas as funcionalidades disponíveis' },
+      { texto: 'Alertas de produtos que você procura' },
       { texto: 'Negócios extraordinários avisados na hora' },
       { texto: 'Todos os modelos e categorias do radar' },
+      { texto: 'Verificador de IMEI' },
     ],
   },
   {
     value: 'intermedium',
     nome: 'Intermedium',
     resumo: 'O radar no seu ritmo, pago por semana.',
-    preco: { mensal: null, anual: null },
+    preco: { mensal: 23.9, anual: null },
     periodo: 'semana',
     vantagens: [
-      { texto: 'Tudo do Free' },
-      { texto: 'Radar de oportunidades no feed' },
-      { texto: 'Alertas das oportunidades' },
-      { texto: 'Cobrança semanal, cancela quando quiser' },
+      { texto: 'Todas as funcionalidades disponíveis' },
+      { texto: 'Alertas de produtos que você procura' },
+      { texto: 'Negócios extraordinários avisados na hora' },
+      { texto: 'Todos os modelos e categorias do radar' },
+      { texto: 'Verificador de IMEI' },
     ],
   },
 ]

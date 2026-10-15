@@ -44,16 +44,14 @@ function Salvos() {
   useEffect(() => {
     if (!carregado || esperandoFeed || foraDoFeed.length === 0) return
     let ativo = true
-    supabase
-      .from('anuncios_ativos')
-      .select('url')
-      .in('url', foraDoFeed)
-      .then(({ data, error }) => {
-        if (!ativo) return
-        if (error) console.error('Erro ao conferir os salvos fora do feed:', error.message)
-        // Sem resposta, nenhum vira "vendido": todos ficam só com o aviso.
-        setAindaAtivos(new Set(error ? foraDoFeed : data.map((linha) => linha.url)))
-      })
+    // salvos_ainda_ativos(): as URLs dos salvos da pessoa que seguem no ar (a
+    // tabela anuncios_ativos não é lida direto, ver config/planos.js).
+    supabase.rpc('salvos_ainda_ativos').then(({ data, error }) => {
+      if (!ativo) return
+      if (error) console.error('Erro ao conferir os salvos fora do feed:', error.message)
+      // Sem resposta, nenhum vira "vendido": todos ficam só com o aviso.
+      setAindaAtivos(new Set(error ? foraDoFeed : data))
+    })
     return () => {
       ativo = false
     }

@@ -64,7 +64,8 @@ export async function salvarOnboarding(user) {
     tempo_resposta: r.tempoResposta,
     conserta: consertaValido(r),
     meta_lucro_mensal: r.meta > 0 ? r.meta : null,
-    plano: r.plano,
+    // O plano não vai daqui: só o servidor grava preferencias.plano (conta nova
+    // entra no Free, ver config/planos.js).
     cep: r.cep || null,
     // No banco, ~100 m (3 casas) bastam para o raio.
     lat: r.lat == null ? null : Math.round(r.lat * 1000) / 1000,
@@ -72,6 +73,5 @@ export async function salvarOnboarding(user) {
   })
   if (error) throw error
 
-  usePreferenciasStore.setState({ planoAtual: r.plano })
   useAuthStore.setState({ quizRespondido: true })
 }
