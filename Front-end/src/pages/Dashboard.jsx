@@ -89,7 +89,7 @@ const STEP = {
 
 function Dashboard({ exemplo = false }) {
   const { data, pronto, exemplo: comExemplo } = useDashboardData(exemplo)
-  const { meta, salvarMeta } = useMetaMensal(comExemplo)
+  const { meta, metaEm, salvarMeta } = useMetaMensal(comExemplo)
   // Abre com os valores escondidos se o usuário pediu isso em Privacidade.
   const [hidden, setHidden] = useState(() => usePreferenciasStore.getState().ocultarValores)
 
@@ -139,6 +139,9 @@ function Dashboard({ exemplo = false }) {
                 <LucroAcumulado
                   step={STEP.lucro}
                   data={data.lucro}
+                  meta={meta}
+                  metaEm={metaEm}
+                  onMeta={salvarMeta}
                   hidden={hidden}
                   onToggleHidden={() => setHidden((h) => !h)}
                 />
@@ -153,9 +156,12 @@ function Dashboard({ exemplo = false }) {
                 <InvestimentoRetorno step={STEP.investimentoRetorno} data={data.investimentoRetorno} />
               </div>
 
-              {/* A meta do mês (do onboarding) logo antes dos números do mês. */}
+              {/* A meta do mês (do onboarding) logo antes dos números do mês. Sem
+                  meta, quem pede para definir é o card do lucro, lá em cima. */}
               <div className="mt-4 flex flex-col gap-3 lg:col-span-7 lg:mt-0 lg:gap-5">
-                <MetaDoMes step={STEP.meta} meta={meta} onMeta={salvarMeta} lucro={data.mes.lucro} mes={data.mes.nome} />
+                {meta > 0 && (
+                  <MetaDoMes step={STEP.meta} meta={meta} onMeta={salvarMeta} lucro={data.mes.lucro} mes={data.mes.nome} />
+                )}
                 <MetricasMes step={STEP.mes} data={data.mes} />
               </div>
 

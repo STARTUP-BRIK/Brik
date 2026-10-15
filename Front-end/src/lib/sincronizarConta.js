@@ -108,11 +108,7 @@ async function gravarRaio() {
 
 async function carregarDoOnboarding(userId) {
   const [prefs, modelos] = await Promise.all([
-    supabase
-      .from('preferencias')
-      .select('meta_lucro_mensal, plano, distancia_km, lat, lng, cidade')
-      .eq('user_id', userId)
-      .maybeSingle(),
+    supabase.from('preferencias').select('meta_lucro_mensal, plano').eq('user_id', userId).maybeSingle(),
     carregarInteresses(userId).catch((error) => {
       console.error('Erro ao carregar os modelos das notificações:', error.message)
       return null
@@ -123,7 +119,9 @@ async function carregarDoOnboarding(userId) {
   const estado = {}
   if (prefs.error) console.error('Erro ao carregar a meta e o plano:', prefs.error.message)
   else if (prefs.data) {
-    if (prefs.data.meta_lucro_mensal != null) estado.metaMensal = Number(prefs.data.meta_lucro_mensal)
+    // A conta manda: sem meta nela, o dashboard pede uma (e não fica um valor
+    // antigo deste aparelho).
+    estado.metaMensal = prefs.data.meta_lucro_mensal != null ? Number(prefs.data.meta_lucro_mensal) : null
     if (prefs.data.plano) estado.planoAtual = prefs.data.plano
     if (prefs.data.distancia_km != null) estado.raio = raioGravado = Number(prefs.data.distancia_km)
     // numeric chega como string.
@@ -132,6 +130,7 @@ async function carregarDoOnboarding(userId) {
       estado.origem = { lat: lat == null ? null : Number(lat), lng: lng == null ? null : Number(lng), cidade: cidade ?? '', bairro: '' }
     }
   }
+  if (metas.data?.metas_mensais) estado.metasMensais = metas.data.metas_mensais
   if (modelos?.length) estado.modelosNotificacao = modelos
   aplicandoDoBanco = true
   usePreferenciasStore.setState(estado)

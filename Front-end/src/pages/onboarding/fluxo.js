@@ -11,7 +11,6 @@ export const caminho = (passo) => `/onboarding/${passo}`
 export const PROGRESSO = {
   equipe: 16,
   tempo: 23,
-  horas: 29,
   diagnostico: 35,
   resposta: 41,
   'primeira-proposta': 47,
@@ -20,8 +19,27 @@ export const PROGRESSO = {
   oportunidade: 58,
   defeito: 60,
   raio: 65,
+  lucro: 68,
   meta: 71,
 }
+
+// Etapas do painel da esquerda no computador (PainelEtapas, em pecas.jsx):
+// cada uma com as telas que fazem parte dela.
+export const ETAPAS = [
+  { titulo: 'Sua conta', texto: 'Seus dados e como você prefere ver o Brik.', passos: ['cadastro', 'tema'] },
+  { titulo: 'O jeito Brik', texto: 'Como o Brik encontra as oportunidades por você.', passos: ['rolagem', 'jeito-melhor', 'solucao'] },
+  {
+    titulo: 'Sobre você',
+    texto: 'Quanto tempo a busca toma hoje e quão rápido você responde.',
+    passos: ['equipe', 'tempo', 'diagnostico', 'resposta', 'primeira-proposta'],
+  },
+  {
+    titulo: 'Seu radar',
+    texto: 'O que você revende, até onde vai buscar, quanto lucra hoje e a sua meta.',
+    passos: ['categorias', 'modelos', 'defeito', 'raio', 'lucro', 'meta', 'montagem'],
+  },
+  { titulo: 'Seu plano', texto: 'O caminho daqui até a sua meta.', passos: ['radar', 'alerta', 'alertas', 'dashboard', 'plano', 'planos'] },
+]
 
 // --- Respostas ---------------------------------------------------------------
 
@@ -56,10 +74,6 @@ export const CATEGORIAS_ONB = {
   videogame_console: { plural: 'videogames', singular: 'videogame' },
 }
 
-// Mais de 1 h por dia: mostra as horas por semana (06). Até 1 h: vai direto ao
-// diagnóstico (07).
-export const muitoTempo = (r) => r.tempoBusca === 'h2' || r.tempoBusca === 'h3'
-
 // --- Para onde cada tela leva --------------------------------------------------
 
 // A conta é criada na 01a (cadastro): todas as telas seguintes pedem sessão.
@@ -71,8 +85,7 @@ export function proximo(passo, r = {}) {
     'jeito-melhor': 'solucao',
     solucao: 'equipe',
     equipe: 'tempo',
-    tempo: muitoTempo(r) ? 'horas' : 'diagnostico',
-    horas: 'diagnostico',
+    tempo: 'diagnostico',
     diagnostico: 'resposta',
     resposta: 'primeira-proposta',
     'primeira-proposta': 'categorias',
@@ -80,7 +93,8 @@ export function proximo(passo, r = {}) {
     modelos: 'oportunidade',
     oportunidade: 'defeito',
     defeito: 'raio',
-    raio: 'meta',
+    raio: 'lucro',
+    lucro: 'meta',
     meta: 'montagem',
     montagem: 'radar',
     radar: 'alerta',
@@ -98,8 +112,7 @@ export function anterior(passo, r = {}) {
     cadastro: LOGIN,
     equipe: caminho('solucao'),
     tempo: caminho('equipe'),
-    horas: caminho('tempo'),
-    diagnostico: caminho(muitoTempo(r) ? 'horas' : 'tempo'),
+    diagnostico: caminho('tempo'),
     resposta: caminho('diagnostico'),
     'primeira-proposta': caminho('resposta'),
     categorias: caminho('primeira-proposta'),
@@ -107,7 +120,8 @@ export function anterior(passo, r = {}) {
     oportunidade: caminho('modelos'),
     defeito: caminho('oportunidade'),
     raio: caminho('defeito'),
-    meta: caminho('raio'),
+    lucro: caminho('raio'),
+    meta: caminho('lucro'),
   }
   return volta[passo] ?? null
 }
@@ -131,6 +145,23 @@ export function horas(r) {
   const semana = porPessoa * pessoas
   return { porDia, pessoas, porPessoa, semana, mes: Math.round(semana * 4.3) }
 }
+
+// Quanto vale cada hora de busca (12b × 05): o lucro do mês dividido pelas
+// horas do mês rolando anúncio. É o que cada uma dessas horas custa hoje e o
+// que pode render negociando. `brik`: quanto sai cada hora com o Pro. Sem
+// lucro ainda (quem está começando), `porHora` fica null e só as horas contam.
+export function valorDaHora(r, precoPro) {
+  const { mes } = horas(r)
+  return {
+    mes,
+    porHora: r.lucroAtual > 0 && mes > 0 ? r.lucroAtual / mes : null,
+    brik: mes > 0 ? precoPro / mes : null,
+  }
+}
+
+// Com centavos ("R$ 0,84"), para os valores por hora.
+const centavos = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+export const reaisCentavos = (valor) => centavos.format(valor)
 
 // "iPhones e videogames", "iPhones" ou "Videogames" (maiuscula: no começo da frase).
 export function listaCategorias(categorias, { maiuscula = false, singular = false } = {}) {

@@ -754,7 +754,6 @@ html.splash-ativa .logo-marca {
 }
 
 /* 06 · barras de horas */
-@keyframes ob-enche-x { from { transform: scaleX(0); } }
 @keyframes ob-enche-y { from { transform: scaleY(0); } }
 
 /* 12 · cada imagem do mapa entra com um fade quando carrega */
@@ -833,6 +832,21 @@ html.ob-travado body {
 
 html.ob-travado {
   background: var(--ob-fundo-pagina, var(--color-surface));
+}
+
+/* Onboarding no computador (.ob-coluna, a coluna da Tela): o botão não fica
+   mais preso no pé da tela, longe do conteúdo, e vem logo depois dele. Os
+   blocos que esticavam para empurrar o botão para baixo (flex-1) ficam do
+   tamanho do conteúdo; as listas que rolam por dentro (min-h-0) continuam
+   ocupando o espaço que sobra. */
+@media (min-width: 1024px) {
+  .ob-coluna .mt-auto {
+    margin-top: 2.5rem;
+  }
+
+  .ob-coluna > .flex-1:not(.min-h-0) {
+    flex: none;
+  }
 }
 
 /* A tela do onboarding rola com o teclado aberto, mas sem mostrar a barra. */

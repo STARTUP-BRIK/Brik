@@ -15,7 +15,9 @@ import {
   modelosValidos,
   proximo,
   reais,
+  reaisCentavos,
   regiao,
+  valorDaHora,
 } from './fluxo.js'
 import { Botao, BotaoDesligado, Celular, Check, Controle, Etiqueta, Grafico, Lampada, Mira, Opcoes, Pino, Rotulo, Subtitulo, Tela, Titulo, Topo } from './pecas.jsx'
 import { SAIDA, brilho, destaque } from './estilo.js'
@@ -24,8 +26,8 @@ import { CartaoNotificacao } from './Climax.jsx'
 import { MODELOS, idsDaCategoria } from '../../config/modelos.js'
 import { NIVEIS } from '../../config/categorias.js'
 
-// 10 a 14: o que adapta o produto (categorias, defeito, raio, meta) e a
-// montagem do radar, que repete cada resposta.
+// 10 a 14: o que adapta o produto (categorias, defeito, raio, lucro de hoje,
+// meta) e a montagem do radar, que repete cada resposta.
 
 const ICONES = { iphone: Celular, videogame_console: Controle }
 const NOMES = { iphone: 'iPhones', videogame_console: 'Videogames' }
@@ -116,6 +118,108 @@ const EXEMPLO_DE_ALERTA = {
   },
 }
 
+const SetaGeracao = ({ aberta }) => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    className={`shrink-0 text-mute transition-transform duration-200 ${aberta ? 'rotate-180' : ''}`}
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+)
+
+// Caixa de marcar a geração inteira: marcada, parcial (só alguns modelos, com
+// o traço) ou vazia. Funciona com a geração aberta ou fechada.
+function CaixaGeracao({ estado, nome, onClick }) {
+  const cheia = estado !== 'vazia'
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={estado === 'marcada' ? true : estado === 'parcial' ? 'mixed' : false}
+      aria-label={`Todos os modelos de ${nome}`}
+      onClick={onClick}
+      className="-ml-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+    >
+      <span
+        aria-hidden="true"
+        className={`flex h-5 w-5 items-center justify-center rounded-md border-[1.5px] transition-colors ${
+          cheia ? 'border-ob-destaque bg-ob-destaque text-ob-sobre-destaque' : 'border-ink/30 bg-surface-card'
+        }`}
+      >
+        {estado === 'marcada' && <Check largura={3.2} width="13" height="13" />}
+        {estado === 'parcial' && <span className="h-0.5 w-2.5 rounded-full bg-current" />}
+      </span>
+    </button>
+  )
+}
+
+// Uma geração (iPhone 17, PlayStation 5...) num cartão que abre e fecha. No
+// cabeçalho: a caixa que marca a geração toda, o nome, quantos estão marcados e
+// a seta. Aberta, mostra os modelos para marcar um a um.
+function Geracao({ grupo, marcados, aberta, onAbrir, onMarcar }) {
+  const ids = grupo.modelos.map((m) => m.id)
+  const n = ids.filter((id) => marcados.has(id)).length
+  const estado = n === 0 ? 'vazia' : n === ids.length ? 'marcada' : 'parcial'
+  const painel = `geracao-${ids[0]}`
+  return (
+    <section
+      aria-label={grupo.grupo}
+      className={`shrink-0 rounded-2xl border bg-surface-card transition-colors ${n ? 'border-ob-destaque/35' : 'border-line'}`}
+    >
+      <div className="flex items-center gap-1 pl-3 pr-2">
+        <CaixaGeracao estado={estado} nome={grupo.grupo} onClick={() => onMarcar(ids, estado !== 'marcada')} />
+        <button
+          type="button"
+          aria-expanded={aberta}
+          aria-controls={painel}
+          onClick={onAbrir}
+          className="flex h-[52px] min-w-0 flex-1 items-center gap-2 rounded-xl pr-1.5 text-left"
+        >
+          <span className="flex-1 truncate text-[15px] font-bold text-ink">{grupo.grupo}</span>
+          <span className={`text-xs ${n ? 'font-bold text-ob-destaque' : 'text-mute'}`}>
+            {n ? `${n} de ${ids.length}` : `${ids.length} modelos`}
+          </span>
+          <SetaGeracao aberta={aberta} />
+        </button>
+      </div>
+
+      {aberta && (
+        <div
+          id={painel}
+          className="ob-anima flex flex-wrap gap-2 px-3.5 pb-3.5"
+          style={{ animation: `ob-abre .25s ${SAIDA} both` }}
+        >
+          {grupo.modelos.map((modelo) => {
+            const on = marcados.has(modelo.id)
+            return (
+              <button
+                key={modelo.id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onMarcar([modelo.id], !on)}
+                className={`inline-flex h-10 items-center gap-1.5 rounded-full border-[1.5px] px-3.5 text-sm font-bold transition-colors ${
+                  on ? 'border-ob-destaque bg-ob-destaque text-ob-sobre-destaque' : 'border-line bg-surface-card text-ink hover:border-ob-destaque/40'
+                }`}
+              >
+                {on && <Check largura={3} width="13" height="13" />}
+                {modelo.nome}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
+
 // 10b · Modelos: de quais modelos das categorias marcadas na 10 a pessoa quer
 // ser avisada (sem dividir por capacidade). Com as duas categorias, uma aba para
 // cada. A lista rola dentro da tela; a tela em si não rola.
@@ -137,6 +241,27 @@ export function Modelos() {
     const resto = modelos.filter((m) => !ids.includes(m))
     responder({ modelos: ligar ? [...resto, ...ids] : resto })
   }
+
+  // Gerações abertas ("iphone:iPhone 17"), de todas as abas: trocar de aba ou
+  // fechar uma geração não mexe no que está marcado. Começam abertas a mais
+  // nova de cada categoria e as que já têm algum modelo marcado.
+  const [abertas, setAbertas] = useState(
+    () =>
+      new Set(
+        categorias.flatMap((c) =>
+          MODELOS[c]
+            .filter((g, i) => i === 0 || g.modelos.some((m) => marcados.has(m.id)))
+            .map((g) => `${c}:${g.grupo}`),
+        ),
+      ),
+  )
+  const alternarGeracao = (chave) =>
+    setAbertas((atuais) => {
+      const novas = new Set(atuais)
+      if (novas.has(chave)) novas.delete(chave)
+      else novas.add(chave)
+      return novas
+    })
 
   return (
     <Pergunta passo="modelos">
@@ -185,44 +310,23 @@ export function Modelos() {
 
       <div
         key={atual}
-        className="ob-anima -mx-5 mt-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6"
+        className="ob-anima ob-sem-barra -mx-5 mt-1 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain px-5 pb-6 pt-2"
         style={{
           animation: 'ob-mostra .25s ease both',
-          // Os modelos somem aos poucos nas bordas da lista, indicando que ela rola.
+          // As gerações somem aos poucos nas bordas da lista, indicando que ela rola.
           maskImage: 'linear-gradient(to bottom, transparent, black 10px, black calc(100% - 28px), transparent)',
         }}
       >
-        {MODELOS[atual].map((grupo) => {
-          const ids = grupo.modelos.map((m) => m.id)
-          return (
-            <section key={grupo.grupo} aria-label={grupo.grupo} className="pt-3.5">
-              <Etiqueta>{grupo.grupo}</Etiqueta>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {grupo.modelos.map((modelo) => {
-                  const on = marcados.has(modelo.id)
-                  return (
-                    <button
-                      key={modelo.id}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => marcar([modelo.id], !on)}
-                      className={`inline-flex h-10 items-center gap-1.5 px-3.5 font-bold ${pilula(on)}`}
-                    >
-                      {on && <Check largura={3} width="13" height="13" />}
-                      {modelo.nome}
-                    </button>
-                  )
-                })}
-              </div>
-              {/* Marca a geração inteira de uma vez (ex.: todos os iPhone 13). */}
-              {ids.length > 2 && !ids.every((id) => marcados.has(id)) && (
-                <button type="button" onClick={() => marcar(ids, true)} className="mt-1.5 h-8 text-[13px] font-bold text-ob-destaque">
-                  + marcar todos
-                </button>
-              )}
-            </section>
-          )
-        })}
+        {MODELOS[atual].map((grupo) => (
+          <Geracao
+            key={grupo.grupo}
+            grupo={grupo}
+            marcados={marcados}
+            aberta={abertas.has(`${atual}:${grupo.grupo}`)}
+            onAbrir={() => alternarGeracao(`${atual}:${grupo.grupo}`)}
+            onMarcar={marcar}
+          />
+        ))}
       </div>
 
       {faltando ? (
@@ -231,7 +335,7 @@ export function Modelos() {
         </BotaoDesligado>
       ) : (
         <Botao to={proximo('modelos', {})} className="mt-3">
-          Continuar com {total} {total === 1 ? 'modelo' : 'modelos'}
+          Continuar · {total} {total === 1 ? 'modelo' : 'modelos'}
         </Botao>
       )}
     </Pergunta>
@@ -660,9 +764,98 @@ export function Raio() {
 
 const inteiro = new Intl.NumberFormat('pt-BR')
 
+// Valor em reais por mês (12b e 13): o campo grande, só números, e os atalhos
+// em pílula. `atalhos`: { valor, texto? } (sem texto, mostra o valor).
+function CampoReais({ id, rotulo, valor, onMudar, atalhos }) {
+  return (
+    <>
+      <label htmlFor={id} className="mt-[26px] text-[13px] font-bold text-ink">
+        {rotulo}
+      </label>
+      <div className="mt-2 flex h-[76px] items-center gap-3 rounded-2xl border-[1.5px] border-ob-destaque bg-surface-card px-[18px]">
+        <span className="text-xl font-bold text-ob-destaque">R$</span>
+        <span aria-hidden="true" className="h-[34px] w-0.5 rounded-full bg-line" />
+        <input
+          id={id}
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="0"
+          value={valor > 0 ? inteiro.format(valor) : ''}
+          onChange={(event) => {
+            const digitos = event.target.value.replace(/\D/g, '').slice(0, 7)
+            onMudar(digitos ? Number(digitos) : 0)
+          }}
+          className="min-w-0 flex-1 border-0 bg-transparent text-[34px] font-bold tracking-[-0.02em] text-ob-titulo outline-none ob-sem-contorno"
+        />
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {atalhos.map((atalho) => (
+          <button
+            key={atalho.valor}
+            type="button"
+            aria-pressed={valor === atalho.valor}
+            onClick={() => onMudar(atalho.valor)}
+            className={`h-11 px-4 font-medium ${pilula(valor === atalho.valor)}`}
+          >
+            {atalho.texto ?? reais(atalho.valor)}
+          </button>
+        ))}
+      </div>
+    </>
+  )
+}
+
+// 12b · Lucro médio por mês hoje. Com o tempo procurando (05), dá quanto vale
+// cada hora de busca, que volta na escolha de plano (20) ao lado do preço do Pro.
+// "Estou começando" vale 0: aí a conta fica só nas horas.
+export function Lucro() {
+  const r = useOnboardingStore()
+  const { mes, porHora } = valorDaHora(r, 0)
+
+  return (
+    <Pergunta passo="lucro">
+      <Rotulo>Seu lucro hoje</Rotulo>
+      <Titulo>Em média, quanto você já lucra por mês com o brique?</Titulo>
+      <Subtitulo>Uma conta aproximada já serve.</Subtitulo>
+
+      <CampoReais
+        id="lucro"
+        rotulo="Lucro médio por mês"
+        valor={r.lucroAtual}
+        onMudar={(valor) => r.responder({ lucroAtual: valor })}
+        atalhos={[{ valor: 0, texto: 'Estou começando' }, { valor: 500 }, { valor: 1000 }, { valor: 2000 }, { valor: 5000 }]}
+      />
+
+      <div className="mt-6 rounded-2xl border border-line bg-surface-card p-4">
+        <Etiqueta>Sua hora de busca</Etiqueta>
+        {porHora ? (
+          <>
+            <p className="mt-2.5 text-[15px] text-ink">
+              <strong className="text-xl font-bold text-ob-titulo">{reaisCentavos(porHora)}</strong> por hora
+            </p>
+            <p className="mt-2.5 text-[12.5px] leading-[1.45] text-mute">
+              É o seu lucro dividido pelas cerca de {mes} horas{r.equipe === 'sozinho' ? '' : ' de equipe'} por mês rolando
+              anúncio. Cada uma delas custa isso.
+            </p>
+          </>
+        ) : (
+          <p className="mt-2.5 text-[15px] leading-[1.45] text-ink">
+            São cerca de <strong className="font-bold text-ob-titulo">{mes} horas</strong> por mês rolando anúncio que podem virar
+            negociação.
+          </p>
+        )}
+      </div>
+
+      <Botao to={proximo('lucro', {})}>Continuar</Botao>
+    </Pergunta>
+  )
+}
+
 // 13 · Meta de lucro mensal. Vai para a conclusão e vira a meta do dashboard.
 export function Meta() {
   const meta = useOnboardingStore((state) => state.meta)
+  const lucroAtual = useOnboardingStore((state) => state.lucroAtual)
   const responder = useOnboardingStore((state) => state.responder)
   const metaFmt = meta > 0 ? inteiro.format(meta) : ''
 
@@ -670,40 +863,15 @@ export function Meta() {
     <Pergunta passo="meta">
       <Rotulo>Sua meta</Rotulo>
       <Titulo>Quanto você quer lucrar por mês com o brique?</Titulo>
+      {lucroAtual > 0 && <Subtitulo>Hoje são cerca de {reais(lucroAtual)} por mês.</Subtitulo>}
 
-      <label htmlFor="meta" className="mt-[26px] text-[13px] font-bold text-ink">
-        Meta de lucro mensal
-      </label>
-      <div className="mt-2 flex h-[76px] items-center gap-3 rounded-2xl border-[1.5px] border-ob-destaque bg-surface-card px-[18px]">
-        <span className="text-xl font-bold text-ob-destaque">R$</span>
-        <span aria-hidden="true" className="h-[34px] w-0.5 rounded-full bg-line" />
-        <input
-          id="meta"
-          inputMode="numeric"
-          autoComplete="off"
-          placeholder="0"
-          value={metaFmt}
-          onChange={(event) => {
-            const digitos = event.target.value.replace(/\D/g, '').slice(0, 7)
-            responder({ meta: digitos ? Number(digitos) : 0 })
-          }}
-          className="min-w-0 flex-1 border-0 bg-transparent text-[34px] font-bold tracking-[-0.02em] text-ob-titulo outline-none ob-sem-contorno"
-        />
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {[1000, 2000, 5000, 10000].map((valor) => (
-          <button
-            key={valor}
-            type="button"
-            aria-pressed={meta === valor}
-            onClick={() => responder({ meta: valor })}
-            className={`h-11 px-4 font-medium ${pilula(meta === valor)}`}
-          >
-            {reais(valor)}
-          </button>
-        ))}
-      </div>
+      <CampoReais
+        id="meta"
+        rotulo="Meta de lucro mensal"
+        valor={meta}
+        onMudar={(valor) => responder({ meta: valor })}
+        atalhos={[1000, 2000, 5000, 10000].map((valor) => ({ valor }))}
+      />
 
       <div className="mt-6 rounded-2xl border border-line bg-surface-card p-4">
         <div className="flex items-center justify-between">

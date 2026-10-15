@@ -5,7 +5,20 @@ import { PROTECAO_ATIVA } from '../../config/protecao.js'
 import { salvarOnboarding } from '../../lib/salvarOnboarding.js'
 import { useAuthStore } from '../../stores/useAuthStore.js'
 import { useOnboardingStore } from '../../stores/useOnboardingStore.js'
-import { EQUIPE, TEMPO_BUSCA, TEMPO_RESPOSTA, caminho, defeitoResumo, listaCategorias, proximo, reais, regiao } from './fluxo.js'
+import { PLANOS } from '../../config/planos.js'
+import {
+  EQUIPE,
+  TEMPO_BUSCA,
+  TEMPO_RESPOSTA,
+  caminho,
+  defeitoResumo,
+  listaCategorias,
+  proximo,
+  reais,
+  reaisCentavos,
+  regiao,
+  valorDaHora,
+} from './fluxo.js'
 import { Botao, Etiqueta, Grafico, Radar, Rotulo, Tela } from './pecas.jsx'
 import { SAIDA, brilho, destaque } from './estilo.js'
 
@@ -157,5 +170,56 @@ export function Planos() {
     }
   }
 
-  return <PaginaPlanos inicio={{ onGratis: comecarGratis, salvando, erro }} />
+  return <PaginaPlanos inicio={{ onGratis: comecarGratis, salvando, erro, chamada: <HorasDevolvidas /> }} />
+}
+
+const PRECO_PRO = PLANOS.find((plano) => plano.value === 'pro')?.preco.mensal
+
+// Na escolha de plano, acima dos cartões: o que custa hoje cada hora rolando
+// anúncio (lucro da 12b ÷ horas do mês, da 05) contra o que ela custa com o
+// Pro, e o lucro que essas horas podem render negociando. Sem lucro informado
+// (quem está começando), só as horas e o preço.
+function HorasDevolvidas() {
+  const r = useOnboardingStore()
+  if (!PRECO_PRO) return null
+  const { mes, porHora, brik } = valorDaHora(r, PRECO_PRO)
+  if (!brik) return null
+  const horasDe = `${mes} horas${r.equipe === 'sozinho' ? '' : ' de equipe'}`
+
+  return (
+    <section
+      aria-label="Quanto valem suas horas de busca"
+      className="ob-anima mx-auto mt-6 max-w-md rounded-3xl bg-surface-card p-5 text-left ring-1 ring-line"
+      style={{ animation: `ob-sobe-10 .5s ${SAIDA} .05s both` }}
+    >
+      {porHora && (
+        <div className="mb-4 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-surface-raise p-3.5">
+            <p className="text-xs text-ink/60">Cada hora procurando hoje</p>
+            <p className="mt-1 text-[22px] font-bold tracking-tight text-loss">{reaisCentavos(porHora)}</p>
+          </div>
+          <div className="rounded-2xl bg-brik/10 p-3.5 ring-1 ring-brik/40">
+            <p className="text-xs text-ink/60">Cada hora com o Brik Pro</p>
+            <p className="mt-1 text-[22px] font-bold tracking-tight text-brik">{reaisCentavos(brik)}</p>
+          </div>
+        </div>
+      )}
+      <p className="text-[15px] leading-normal text-ink">
+        {porHora ? (
+          <>
+            Hoje você paga <strong className="font-bold">{reaisCentavos(porHora)}</strong> do seu lucro por cada uma das cerca de{' '}
+            <strong className="font-bold">{horasDe}</strong> por mês rolando anúncio. O Brik faz essa busca por você e devolve essas
+            horas, que negociando podem render até <strong className="font-bold text-profit">{reais(r.lucroAtual)} a mais</strong>{' '}
+            por mês, por apenas <strong className="font-bold text-brik">{reaisCentavos(PRECO_PRO)}</strong>.
+          </>
+        ) : (
+          <>
+            São cerca de <strong className="font-bold">{horasDe}</strong> por mês rolando anúncio. O Brik faz essa busca por você e
+            devolve essas horas para negociar, por apenas <strong className="font-bold text-brik">{reaisCentavos(PRECO_PRO)}</strong>{' '}
+            por mês.
+          </>
+        )}
+      </p>
+    </section>
+  )
 }
