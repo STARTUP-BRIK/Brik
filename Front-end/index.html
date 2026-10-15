@@ -244,7 +244,25 @@
 
     <p class="splash-tagline">Garimpe ofertas</p>
   </div>
-  <div id="root"></div>
+  <!-- Conteúdo estático para quem lê o HTML sem rodar o JavaScript (a revisão
+       da tela de consentimento OAuth do Google procura o nome "Brik" escrito
+       na página inicial). O React substitui tudo isto ao montar. -->
+  <div id="root">
+    <main style="max-width:40rem;margin:0 auto;padding:2rem 1rem;font-family:Rubik,ui-sans-serif,system-ui,sans-serif;color:#0a3540">
+      <h1>Brik</h1>
+      <p>
+        O Brik analisa anúncios públicos de produtos usados, como os da OLX, calcula o preço médio de cada
+        modelo e mostra só os que estão abaixo da média. É para quem quer comprar barato para uso próprio
+        ou para revender com lucro.
+      </p>
+      <p>
+        <a href="/sobre">Sobre o Brik</a> ·
+        <a href="/privacidade">Política de Privacidade</a>
+      </p>
+    </main>
+  </div>
+  <!-- Sem JavaScript, o main.jsx não remove a splash; ela cobriria o texto acima. -->
+  <noscript><style>#splash{display:none}</style></noscript>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 
