@@ -219,47 +219,13 @@ body {
   .nav-rotulo { transition: none; }
 }
 
-/* Filtros do Início (FiltroCidade e FiltroOfertas) ------------------------
+/* Filtros do Início (FiltroRaio e FiltroOfertas) --------------------------
    Os dois abrem um painel sob a pílula (.painel-pop), com os itens entrando em
    cascata (.painel-item, pelo --i). O de ofertas ainda anima o selo de filtros
-   ativos, o check dos selos e o valor máximo quando muda.
-
-   O da cidade traz um mini-mapa. Ao abrir: o painel cresce do
-   canto, as ruas se desenham, os quarteirões surgem e o pino cai. Só a queda do
-   pino se repete a cada escolha; o resto roda uma vez por abertura. O pulso
-   sob o pino e o ponto "ao vivo" são os únicos em loop — pequenos, e só com o
-   painel aberto. Tudo em transform/opacity, menos o traço das ruas (0,6 s, uma
-   vez, numa área pequena). */
+   ativos, o check dos selos e o valor máximo quando muda. O do raio traz o
+   mapa da tela 12 do onboarding (MapaReal, com as animações dele). */
 @keyframes painel-pop {
   from { opacity: 0; transform: translateY(-6px) scale(0.96); }
-}
-
-@keyframes cidade-rua {
-  from { stroke-dashoffset: 1; }
-  to { stroke-dashoffset: 0; }
-}
-
-@keyframes cidade-quadra {
-  from { opacity: 0; transform: scale(0.8); }
-}
-
-@keyframes cidade-pino {
-  0% { opacity: 0; transform: translateY(-18px) scale(0.4); }
-  60% { opacity: 1; transform: translateY(2px) scale(1.06); }
-  100% { transform: none; }
-}
-
-@keyframes cidade-pulso {
-  from { opacity: 0.7; transform: scale(0.6); }
-  to { opacity: 0; transform: scale(2.2); }
-}
-
-@keyframes cidade-vivo {
-  50% { opacity: 0.35; }
-}
-
-@keyframes cidade-sublinhado {
-  from { transform: scaleX(0.3); }
 }
 
 @keyframes painel-item {
@@ -269,44 +235,6 @@ body {
 .painel-pop {
   transform-origin: top left;
   animation: painel-pop 0.28s cubic-bezier(0.34, 1.3, 0.64, 1) both;
-}
-
-.cidade-mapa {
-  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
-  transition: transform 0.25s ease-out;
-}
-
-/* Desliza para o ponto da cidade escolhida (o transform vem do JSX). */
-.cidade-camada {
-  transition: transform 0.7s cubic-bezier(0.34, 1.15, 0.64, 1);
-}
-
-.cidade-rua {
-  stroke-dasharray: 1;
-  animation: cidade-rua 0.6s ease-out both;
-  animation-delay: calc(0.1s + var(--i, 0) * 0.05s);
-}
-
-.cidade-quadra {
-  animation: cidade-quadra 0.4s ease-out both;
-  animation-delay: calc(0.3s + var(--i, 0) * 0.05s);
-}
-
-.cidade-pino {
-  animation: cidade-pino 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) 0.15s both;
-}
-
-.cidade-pulso {
-  animation: cidade-pulso 1.8s ease-out 0.6s infinite;
-}
-
-.cidade-vivo {
-  animation: cidade-vivo 1.6s ease-in-out infinite;
-}
-
-.cidade-sublinhado {
-  transform-origin: left;
-  animation: cidade-sublinhado 0.5s ease-out 0.2s both;
 }
 
 .painel-item {
@@ -345,19 +273,8 @@ body {
   .painel-selo,
   .painel-check,
   .painel-valor,
-  .cidade-rua,
-  .cidade-quadra,
-  .cidade-pino,
-  .cidade-pulso,
-  .cidade-vivo,
-  .cidade-sublinhado,
   .painel-item {
     animation: none;
-  }
-
-  .cidade-mapa,
-  .cidade-camada {
-    transition: none;
   }
 }
 

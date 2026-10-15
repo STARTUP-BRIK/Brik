@@ -9,7 +9,8 @@ import { supabase } from './supabase.js'
 // Categorias e defeito do radar viram as Configurações do Início (com conta, o
 // sincronizarConta grava em public.configuracoes). Antes do feed real (15), para
 // ele já abrir filtrado pelo radar, e de novo no fim. Os modelos (10b) e a meta
-// (13) vão junto: as respostas do onboarding são apagadas no fim, e é das
+// (13) vão junto, e o raio (12) com o ponto de partida, para o filtro de raio
+// do Início: as respostas do onboarding são apagadas no fim, e é das
 // preferências que as Notificações e o card da meta do Dashboard leem. Os
 // níveis de oportunidade (10c) ligam ou desligam os e-mails de cada nível.
 export function aplicarRadar() {
@@ -19,6 +20,8 @@ export function aplicarRadar() {
     mostrarDefeito: consertaValido(r).length > 0,
     modelosNotificacao: modelosValidos(r),
     metaMensal: r.meta,
+    raio: r.raio,
+    origem: r.lat != null || r.cidade ? { lat: r.lat, lng: r.lng, cidade: r.cidade, bairro: r.bairro } : null,
     notificacoes: {
       ...notificacoes,
       ...Object.fromEntries(NIVEIS.map(({ value }) => [value, r.niveisAlerta.includes(value)])),

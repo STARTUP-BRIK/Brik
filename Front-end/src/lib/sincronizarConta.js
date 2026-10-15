@@ -7,8 +7,9 @@ import { supabase } from './supabase.js'
 // Liga os dados do usuário ao banco conforme a sessão muda (importado em
 // main.jsx). No login: carrega os ajustes (public.configuracoes), os salvos e o
 // que veio do onboarding: os modelos de que a pessoa quer ser avisada
-// (public.interesses_notificacao), a meta e o plano (public.preferencias).
-// Depois, cada mudança de ajuste e de modelos é gravada. No logout: volta tudo
+// (public.interesses_notificacao), a meta, o plano, o raio e o ponto de partida
+// (public.preferencias). Depois, cada mudança de ajuste, de modelos e do raio é
+// gravada. No logout: volta tudo
 // ao padrão, para a próxima conta neste navegador não herdar nada.
 
 // Campo do store -> coluna de public.configuracoes.
@@ -18,7 +19,6 @@ const COLUNAS = {
   categorias: 'categorias',
   nivelMinimo: 'nivel_minimo',
   mostrarDefeito: 'mostrar_defeito',
-  cidade: 'cidade',
   niveis: 'niveis',
   precoMaximo: 'preco_maximo',
   filtroDefeito: 'filtro_defeito',
@@ -70,7 +70,7 @@ async function carregarConfiguracoes(userId) {
   gravado = JSON.stringify(paraLinha(usePreferenciasStore.getState()))
 }
 
-// --- Modelos de interesse, meta e plano (do onboarding) ------------------------
+// --- Modelos de interesse, meta, plano e raio (do onboarding) -----------------
 
 // Os modelos que estão no banco (lista ordenada, em texto), para só gravar
 // quando a lista mudou de fato. null enquanto não carregou.
@@ -91,9 +91,28 @@ async function gravarInteresses() {
   }
 }
 
+// O último raio lido ou gravado em public.preferencias.distancia_km, para não
+// gravar o mesmo de novo. Sem a linha (onboarding por terminar), o update não
+// acha nada e o salvarOnboarding grava o raio junto com o resto.
+let raioGravado = null
+let timerRaio = null
+
+async function gravarRaio() {
+  const { raio } = usePreferenciasStore.getState()
+  if (!usuario || raio === raioGravado) return
+  const userId = usuario
+  const { error } = await supabase.from('preferencias').update({ distancia_km: raio }).eq('user_id', userId)
+  if (error) console.error('Erro ao salvar o raio:', error.message)
+  else if (usuario === userId) raioGravado = raio
+}
+
 async function carregarDoOnboarding(userId) {
   const [prefs, modelos] = await Promise.all([
-    supabase.from('preferencias').select('meta_lucro_mensal, plano').eq('user_id', userId).maybeSingle(),
+    supabase
+      .from('preferencias')
+      .select('meta_lucro_mensal, plano, distancia_km, lat, lng, cidade')
+      .eq('user_id', userId)
+      .maybeSingle(),
     carregarInteresses(userId).catch((error) => {
       console.error('Erro ao carregar os modelos das notificações:', error.message)
       return null
@@ -106,6 +125,12 @@ async function carregarDoOnboarding(userId) {
   else if (prefs.data) {
     if (prefs.data.meta_lucro_mensal != null) estado.metaMensal = Number(prefs.data.meta_lucro_mensal)
     if (prefs.data.plano) estado.planoAtual = prefs.data.plano
+    if (prefs.data.distancia_km != null) estado.raio = raioGravado = Number(prefs.data.distancia_km)
+    // numeric chega como string.
+    const { lat, lng, cidade } = prefs.data
+    if (lat != null || cidade) {
+      estado.origem = { lat: lat == null ? null : Number(lat), lng: lng == null ? null : Number(lng), cidade: cidade ?? '', bairro: '' }
+    }
   }
   if (modelos?.length) estado.modelosNotificacao = modelos
   aplicandoDoBanco = true
@@ -126,8 +151,10 @@ function aoMudarSessao({ session }) {
   usuario = id
   gravado = null
   interessesGravados = null
+  raioGravado = null
   clearTimeout(timer)
   clearTimeout(timerInteresses)
+  clearTimeout(timerRaio)
 
   if (!id) {
     if (saiu) {
@@ -157,6 +184,11 @@ usePreferenciasStore.subscribe((estado, anterior) => {
   if (interessesGravados !== null && estado.modelosNotificacao !== anterior.modelosNotificacao) {
     clearTimeout(timerInteresses)
     timerInteresses = setTimeout(gravarInteresses, 600)
+  }
+  // Arrastar a régua do raio: grava só quando a pessoa para.
+  if (estado.raio !== anterior.raio) {
+    clearTimeout(timerRaio)
+    timerRaio = setTimeout(gravarRaio, 600)
   }
 })
 

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { usePreferenciasStore } from '../../stores/usePreferenciasStore.js'
+import { distanciaKm, useLugares } from '../../lib/lugares.js'
 import { destaque } from './estilo.js'
 
 // Mapa de verdade do raio de busca (tela 12), centrado no ponto da pessoa. Os
@@ -62,38 +63,6 @@ function useZoomSuave(alvo) {
 
   // eslint-disable-next-line react-hooks/refs
   return { zoom, partida: partida.current }
-}
-
-// Bairros e cidades de Pernambuco (OpenStreetMap), em public/lugares-pe.json:
-// [nome, lat, lng, tipo], tipo 'b' bairro, 'v' vizinhança, 'c' cidade. Gerado
-// uma vez pela Overpass API, com a consulta
-//   node["place"~"^(suburb|neighbourhood|quarter|town|city)$"](-9.55,-41.45,-7.15,-34.75);
-// Carregado uma vez por visita, só quando o mapa real aparece.
-let lugaresCarregados = null
-
-function useLugares() {
-  const [lugares, setLugares] = useState(lugaresCarregados)
-  useEffect(() => {
-    if (lugaresCarregados) return
-    let ativo = true
-    fetch('/lugares-pe.json')
-      .then((resposta) => resposta.json())
-      .then((lista) => {
-        lugaresCarregados = lista
-        if (ativo) setLugares(lista)
-      })
-      .catch(() => {})
-    return () => {
-      ativo = false
-    }
-  }, [])
-  return lugares
-}
-
-function distanciaKm(lat1, lng1, lat2, lng2) {
-  const rad = (g) => (g * Math.PI) / 180
-  const h = Math.sin(rad(lat2 - lat1) / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lng2 - lng1) / 2) ** 2
-  return 2 * 6371 * Math.asin(Math.sqrt(h))
 }
 
 const MAXIMO_DE_NOMES = 14
