@@ -326,36 +326,55 @@ def descobrir_ultima_pagina_com_retry(driver, url: str) -> Optional[int]:
     return None
 
 
+# Lê todos os cards da página numa chamada só ao navegador (cada .text /
+# get_attribute do Selenium é uma ida e volta ao driver: eram ~300 por página).
+# Cada campo é buscado DENTRO do card (<section class="olx-adcard">), então um
+# card sem imagem ou sem data não desalinha os campos dos cards seguintes.
+JS_LER_CARDS = """
+const texto = (card, seletor) => {
+    const el = card.querySelector(seletor);
+    return el ? (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim() : '';
+};
+return Array.from(document.querySelectorAll('section.olx-adcard'))
+    .map((card) => {
+        const link = card.querySelector('a.olx-adcard__link');
+        if (!link) return null;
+        const imagem = card.querySelector('source[type="image/jpeg"]');
+        return {
+            titulo: texto(card, '.olx-adcard__title'),
+            preco: texto(card, 'h3.olx-adcard__price'),
+            local: texto(card, '.olx-adcard__location'),
+            data: texto(card, '.olx-adcard__date'),
+            imagem: imagem ? imagem.getAttribute('srcset') || '' : '',
+            link: link.href,
+        };
+    })
+    .filter(Boolean);
+"""
+
+
 def raspar_pagina(driver, condicao: str) -> list[dict]:
     """Extrai todos os anúncios da página atual."""
     if driver.find_elements(By.XPATH, "//div[contains(@class,'AdNotFound')]"):
         raise SemMaisResultados()
 
+    # Os cards vêm prontos no HTML do servidor: com o 1º no DOM (page_load_strategy
+    # 'eager' = HTML inteiro já lido), os outros também estão, sem pausa pra renderizar.
     esperar_conteudo(driver, "//a[@class='olx-adcard__link']", 30)
-    sleep(random.uniform(1, 2))  # pequena pausa para JS terminar de renderizar
 
-    titulos = driver.find_elements(By.XPATH, "//h2[contains(@class,'olx-adcard__title')]")
-    precos  = driver.find_elements(By.XPATH, "//h3[contains(@class,'olx-adcard__price')]")
-    locais  = driver.find_elements(By.XPATH, "//p[contains(@class,'olx-adcard__location')]")
-    datas   = driver.find_elements(By.XPATH, "//p[contains(@class,'olx-adcard__date')]")
-    imagens = driver.find_elements(By.XPATH, "//source[@type='image/jpeg']")
-    links   = driver.find_elements(By.XPATH, "//a[@class='olx-adcard__link']")
-
-    anuncios = []
-    for i, link in enumerate(links):
-        preco_raw = precos[i].text if i < len(precos) else ''
-        anuncio = {
-            'Titulo':    titulos[i].text                    if i < len(titulos) else '',
-            'Preco':     parse_preco(preco_raw),
-            'Preco_Raw': preco_raw,
-            'Local':     locais[i].text                     if i < len(locais)  else '',
-            'Data':      normalizar_data(datas[i].text)     if i < len(datas)   else '',
-            'Imagem':    imagens[i].get_attribute('srcset') if i < len(imagens) else '',
-            'Link':      link.get_attribute('href'),
+    return [
+        {
+            'Titulo':    card['titulo'],
+            'Preco':     parse_preco(card['preco']),
+            'Preco_Raw': card['preco'],
+            'Local':     card['local'],
+            'Data':      normalizar_data(card['data']),
+            'Imagem':    card['imagem'],
+            'Link':      card['link'],
             'Condicao':  condicao,
         }
-        anuncios.append(anuncio)
-    return anuncios
+        for card in driver.execute_script(JS_LER_CARDS)
+    ]
 
 
 def raspar_pagina_com_retry(driver, url: str, condicao: str) -> Optional[list[dict]]:
