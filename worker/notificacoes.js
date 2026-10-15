@@ -3,7 +3,8 @@
 // Quem recebe: quem acompanha o modelo do anúncio (public.interesses_notificacao,
 // ids de Front-end/src/config/modelos.js) e ligou o nível dele na tela de
 // Notificações (public.configuracoes.notificacoes: chaves boa, otima,
-// extraordinaria). Cada pessoa recebe no máximo um e-mail por anúncio
+// extraordinaria). No plano Free, só das ofertas que o feed dele mostra
+// (ofertas_liberadas). Cada pessoa recebe no máximo um e-mail por anúncio
 // (public.notificacoes_enviadas).
 //
 // Envio pelo Resend (RESEND_API_KEY). Sem a chave, o passo é pulado. Falha aqui
@@ -22,6 +23,7 @@ const LOTE_IN = 40; // mesmo limite de .in() do worker (headers overflow acima d
 // Mesmo padrão da tela de Notificações (usePreferenciasStore): quem nunca mexeu
 // recebe ótimo e extraordinário; bom negócio é volume alto demais para e-mail.
 const NIVEIS_PADRAO = { boa: false, otima: true, extraordinaria: true };
+const PLANOS_PAGOS = ['pro', 'intermedium'];
 const ROTULO_NIVEL = { boa: 'Bom negócio', otima: 'Ótimo negócio', extraordinaria: 'Negócio extraordinário' };
 
 const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -153,6 +155,26 @@ async function notificarAnuncios(supabase, urls) {
         data.forEach((linha) => niveisDe.set(linha.user_id, { ...NIVEIS_PADRAO, ...(linha.notificacoes ?? {}) }));
     }
 
+    // Plano: o Free só é avisado do que pode ver no feed (mesma regra do banco,
+    // ofertas_liberadas; ver Front-end/src/config/planos.js). Sem linha em
+    // preferencias, Free.
+    const pagos = new Set();
+    for (const lote of emLotes(usuarios)) {
+        const { data, error } = await supabase.from('preferencias').select('user_id, plano').in('user_id', lote);
+        if (error) throw new Error(`Erro ao ler os planos: ${error.message}`);
+        data.forEach((linha) => {
+            if (PLANOS_PAGOS.includes(linha.plano)) pagos.add(linha.user_id);
+        });
+    }
+    const liberadasNoFree = new Set();
+    if (usuarios.some((id) => !pagos.has(id))) {
+        for (const lote of emLotes(anuncios.map((a) => a.url))) {
+            const { data, error } = await supabase.rpc('ofertas_liberadas', { p_plano: 'gratis', p_urls: lote });
+            if (error) throw new Error(`Erro ao ler as ofertas do plano Free: ${error.message}`);
+            data.forEach((oferta) => liberadasNoFree.add(oferta.url));
+        }
+    }
+
     const jaEnviados = new Set();
     for (const lote of emLotes(anuncios.map((a) => a.url))) {
         const { data, error } = await supabase.from('notificacoes_enviadas').select('user_id, anuncio_url').in('anuncio_url', lote);
@@ -165,6 +187,7 @@ async function notificarAnuncios(supabase, urls) {
         const niveis = niveisDe.get(userId) ?? NIVEIS_PADRAO;
         for (const anuncio of porModelo.get(modelo)) {
             if (niveis[anuncio.opportunity_level] !== true) continue;
+            if (!pagos.has(userId) && !liberadasNoFree.has(anuncio.url)) continue;
             if (jaEnviados.has(`${userId}|${anuncio.url}`)) continue;
             envios.push({ userId, anuncio });
         }

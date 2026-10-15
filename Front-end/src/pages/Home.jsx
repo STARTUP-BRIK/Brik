@@ -8,6 +8,8 @@ import { SearchIcon } from '../components/icons.jsx'
 import FiltroRaio from '../components/FiltroRaio.jsx'
 import FiltroOfertas from '../components/FiltroOfertas.jsx'
 import { CATEGORIAS, NIVEIS } from '../config/categorias.js'
+import { LUCRO_MAXIMO_FREE, planoPago } from '../config/planos.js'
+import { formatBRL } from '../lib/format.js'
 import { distanciaKm, pontoDaCidade, pontoDoAnuncio, useLugares } from '../lib/lugares.js'
 import { dataDoAnuncio, inicioDoPeriodo } from '../lib/postagem.js'
 
@@ -27,6 +29,7 @@ function Home({ desfocado = false }) {
   const categorias = usePreferenciasStore((state) => state.categorias)
   const nivelMinimo = usePreferenciasStore((state) => state.nivelMinimo)
   const mostrarDefeito = usePreferenciasStore((state) => state.mostrarDefeito)
+  const plano = usePreferenciasStore((state) => state.planoAtual)
   const visiveisNoFeed = CATEGORIAS.filter(({ value }) => categorias.includes(value))
   // Raio: só os anúncios até `raio` km do ponto de partida do onboarding.
   const raio = usePreferenciasStore((state) => state.raio)
@@ -337,6 +340,16 @@ function Home({ desfocado = false }) {
         </aside>
 
         <main className={`px-4 lg:min-w-0 lg:flex-1 lg:px-0 ${desfoque}`}>
+          {/* No Free o banco só manda bons negócios abaixo do teto de lucro
+              (config/planos.js): o aviso explica por que faltam os outros. */}
+          {!desfocado && !planoPago(plano) && (
+            <p className="mt-4 rounded-2xl bg-surface-raise px-4 py-3 text-sm text-ink/70 lg:mt-0 lg:mb-4">
+              No plano Free você vê bons negócios com lucro abaixo de {formatBRL(LUCRO_MAXIMO_FREE)}.{' '}
+              <Link to="/planos" viewTransition className="font-medium text-brik underline underline-offset-2 hover:text-brik-dark">
+                Assine para ver todas as ofertas
+              </Link>
+            </p>
+          )}
           {!loading && !esperandoLugares && visible.length > 0 && (
             <p className="pb-3 pt-4 text-xs text-ink/60 lg:pt-0" aria-live="polite">
               {visible.length} {visible.length === 1 ? 'oportunidade' : 'oportunidades'}

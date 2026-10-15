@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
 import LayoutTelaCheia from './components/LayoutTelaCheia.jsx'
 import RotaProtegida from './components/RotaProtegida.jsx'
+import SoPlanoPago from './components/SoPlanoPago.jsx'
 import Home from './pages/Home.jsx'
 import ProductDetail from './pages/ProductDetail.jsx'
 import Dashboard from './pages/Dashboard.jsx'
@@ -42,8 +43,16 @@ const router = createBrowserRouter([
           { path: '/perfil', element: <Perfil /> },
           // O "+" da navbar abre o estoque do usuário.
           { path: '/adicionar', element: <MeusProdutos /> },
-          // Só no desktop (link na TopBar); no celular a tela avisa isso.
-          { path: '/imei', element: <VerificarImei /> },
+          // Só no desktop (link na TopBar); no celular a tela avisa isso. Só
+          // nos planos pagos: no Free abre o aviso de assinar.
+          {
+            path: '/imei',
+            element: (
+              <SoPlanoPago recurso="Verificador de IMEI">
+                <VerificarImei />
+              </SoPlanoPago>
+            ),
+          },
           // Itens da lista do Meu Perfil. Ficam no Layout (com navbar, e a aba
           // Meu Perfil acesa) e voltam para o perfil pela seta do título.
           { path: '/perfil/privacidade', element: <Privacidade /> },

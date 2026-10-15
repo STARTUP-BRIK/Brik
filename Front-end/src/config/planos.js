@@ -6,6 +6,16 @@
 // publicar, principalmente as do Intermedium.
 //
 // A ordem é a da tela: o Pro, mais popular, fica no centro.
+//
+// Acesso: quem decide é o banco, não a tela. O feed vem de ofertas_feed(), que
+// filtra pelo plano em public.preferencias.plano (só o servidor troca esse
+// valor). No Free, só "bom negócio" com lucro abaixo de LUCRO_MAXIMO_FREE; o
+// verificador de IMEI é só dos pagos. Mudou a regra? Mudar também no banco
+// (ofertas_liberadas) e no worker (notificacoes.js).
+
+export const LUCRO_MAXIMO_FREE = 100
+
+export const planoPago = (plano) => plano === 'pro' || plano === 'intermedium'
 
 export const PLANOS = [
   {
@@ -20,6 +30,7 @@ export const PLANOS = [
       { texto: 'Calculadora de brique' },
       { texto: 'Radar demonstrativo com baixas oportunidades' },
       { texto: 'Sem alertas', fora: true },
+      { texto: 'Verificador de IMEI', fora: true },
     ],
   },
   {
@@ -34,6 +45,7 @@ export const PLANOS = [
       { texto: 'Alertas de produtos que você procura' },
       { texto: 'Negócios extraordinários avisados na hora' },
       { texto: 'Todos os modelos e categorias do radar' },
+      { texto: 'Verificador de IMEI' },
     ],
   },
   {
@@ -47,6 +59,7 @@ export const PLANOS = [
       { texto: 'Alertas de produtos que você procura' },
       { texto: 'Negócios extraordinários avisados na hora' },
       { texto: 'Todos os modelos e categorias do radar' },
+      { texto: 'Verificador de IMEI' },
     ],
   },
 ]
