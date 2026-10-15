@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { CATEGORIAS, NIVEIS } from '../config/categorias.js'
-import { TODAS } from '../config/cidades.js'
 
 // Ajustes do app: telas do Meu Perfil e filtros do Início. A fonte é a linha
 // do usuário em public.configuracoes (lib/sincronizarConta.js carrega no login e
@@ -22,9 +21,13 @@ export const PREFERENCIAS_PADRAO = {
   // false esconde de vez os aparelhos com defeito (o botão Filtros nem oferece).
   mostrarDefeito: true,
 
-  // Início: filtro de cidade (TODAS, um grupo como 'grande-recife' ou o nome
-  // da cidade). Fica guardado para o Início reabrir na cidade de sempre.
-  cidade: TODAS,
+  // Início: filtro de raio. O feed mostra só os anúncios a até `raio` km de
+  // `origem` ({ lat, lng, cidade, bairro }, o ponto de partida do onboarding;
+  // sem lat/lng vale o centro da cidade). Os dois vêm de public.preferencias
+  // (distancia_km, lat, lng, cidade; lib/sincronizarConta.js carrega e grava o
+  // raio). null: sem ponto, o feed não filtra por distância.
+  raio: 15,
+  origem: null,
 
   // Início: botão Filtros. Quais selos aparecem (dentro do mínimo das
   // Configurações) e o máximo que a pessoa quer gastar (null = sem limite).
@@ -38,10 +41,13 @@ export const PREFERENCIAS_PADRAO = {
   ordem: 'recentes',
   periodo: 'todos',
 
-  // Notificações: só as escolhas; os avisos ainda não são enviados.
+  // Notificações. boa/otima/extraordinaria: e-mail por oportunidade daquele
+  // nível (worker/notificacoes.js, mesmo padrão em NIVEIS_PADRAO; "bom negócio"
+  // começa desligado por ser volume alto). Os outros ainda não são enviados.
   notificacoes: {
-    oportunidades: true,
-    extraordinarias: true,
+    boa: false,
+    otima: true,
+    extraordinaria: true,
     estoqueParado: false,
     novidades: false,
   },
@@ -77,7 +83,7 @@ export const usePreferenciasStore = create(
       setModoEscuro: (modoEscuro) => set({ modoEscuro }),
       setOcultarValores: (ocultarValores) => set({ ocultarValores }),
       setNivelMinimo: (nivelMinimo) => set({ nivelMinimo }),
-      setCidade: (cidade) => set({ cidade }),
+      setRaio: (raio) => set({ raio }),
       setNiveis: (niveis) => set({ niveis }),
       setPrecoMaximo: (precoMaximo) => set({ precoMaximo }),
       setMostrarDefeito: (mostrarDefeito) => set({ mostrarDefeito }),

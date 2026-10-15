@@ -24,6 +24,7 @@ import { SAIDA, brilho, destaque } from './estilo.js'
 import { MapaReal } from './MapaReal.jsx'
 import { CartaoNotificacao } from './Climax.jsx'
 import { MODELOS, idsDaCategoria } from '../../config/modelos.js'
+import { NIVEIS } from '../../config/categorias.js'
 
 // 10 a 14: o que adapta o produto (categorias, defeito, raio, lucro de hoje,
 // meta) e a montagem do radar, que repete cada resposta.
@@ -58,7 +59,7 @@ export function Categorias() {
 
   return (
     <Pergunta passo="categorias">
-      <Rotulo>Seu radar · 1 de 4</Rotulo>
+      <Rotulo>Seu radar · 1 de 5</Rotulo>
       <Titulo>O que você revende?</Titulo>
       <Subtitulo>Pode marcar as duas.</Subtitulo>
 
@@ -264,7 +265,7 @@ export function Modelos() {
 
   return (
     <Pergunta passo="modelos">
-      <Rotulo>Seu radar · 2 de 4</Rotulo>
+      <Rotulo>Seu radar · 2 de 5</Rotulo>
       <Titulo>Quais produtos você quer ser notificado?</Titulo>
 
       {/* Como o alerta chega, com um exemplo da categoria da aba aberta. */}
@@ -341,6 +342,73 @@ export function Modelos() {
   )
 }
 
+// 10c · Oportunidades: de quais níveis a pessoa quer e-mail (um por anúncio,
+// worker/notificacoes.js). Pode marcar mais de um; vem com ótimo e
+// extraordinário, os de menos volume.
+const VOLUME_DO_NIVEL = {
+  boa: 'O que mais aparece',
+  otima: 'Aparece menos',
+  extraordinaria: 'Raro: a melhor chance de lucro',
+}
+
+export function Oportunidade() {
+  const niveis = useOnboardingStore((state) => state.niveisAlerta)
+  const responder = useOnboardingStore((state) => state.responder)
+
+  const alternar = (valor) =>
+    responder({
+      niveisAlerta: niveis.includes(valor)
+        ? niveis.filter((n) => n !== valor)
+        : NIVEIS.map((n) => n.value).filter((n) => n === valor || niveis.includes(n)),
+    })
+
+  return (
+    <Pergunta passo="oportunidade">
+      <Rotulo>Seu radar · 3 de 5</Rotulo>
+      <Titulo>Quais oportunidades você quer receber?</Titulo>
+      <Subtitulo>Cada uma chega no seu e-mail assim que aparece. Pode marcar mais de uma.</Subtitulo>
+
+      <div className="mt-6">
+        {NIVEIS.map(({ value, label, desconto }, i) => {
+          const on = niveis.includes(value)
+          return (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={on}
+              onClick={() => alternar(value)}
+              className={`flex min-h-16 w-full items-center gap-3.5 rounded-[14px] border-[1.5px] px-4 py-3 text-left text-ink ${
+                i < NIVEIS.length - 1 ? 'mb-2.5' : ''
+              } ${on ? 'border-ob-destaque bg-ob-destaque/8' : 'border-line bg-surface-card'}`}
+            >
+              <span className="flex flex-1 flex-col gap-[3px]">
+                <span className="text-[15px] font-medium">{label}</span>
+                <span className="text-[12.5px] text-mute">
+                  {desconto}% ou mais abaixo do mercado · {VOLUME_DO_NIVEL[value]}
+                </span>
+              </span>
+              <span
+                aria-hidden="true"
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
+                  on ? 'border-ob-destaque bg-ob-destaque text-ob-sobre-destaque' : 'border-ink/40 text-transparent'
+                }`}
+              >
+                <Check largura={3} width="14" height="14" />
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {niveis.length ? (
+        <Botao to={proximo('oportunidade', {})}>Continuar</Botao>
+      ) : (
+        <BotaoDesligado>Marque pelo menos uma</BotaoDesligado>
+      )}
+    </Pergunta>
+  )
+}
+
 // 11 · Aparelho com defeito. Sozinho (11a): "Sim, eu conserto" ou "Não". Com
 // equipe (11b, 1 pessoa ou mais): também "tem alguém na equipe que conserta".
 export function Defeito() {
@@ -361,7 +429,7 @@ export function Defeito() {
 
   return (
     <Pergunta passo="defeito">
-      <Rotulo>Seu radar · 3 de 4</Rotulo>
+      <Rotulo>Seu radar · 4 de 5</Rotulo>
       <Titulo id="pergunta">Você procura aparelho com defeito?</Titulo>
 
       <aside className="mt-[18px] flex gap-2.5 rounded-xl bg-ob-destaque/7 p-3.5">
@@ -557,7 +625,7 @@ export function Raio() {
 
   return (
     <Pergunta passo="raio">
-      <Rotulo>Seu radar · 4 de 4</Rotulo>
+      <Rotulo>Seu radar · 5 de 5</Rotulo>
       <Titulo>Até onde você vai para buscar um produto?</Titulo>
 
       <div className="mt-5 flex items-center justify-between gap-3">

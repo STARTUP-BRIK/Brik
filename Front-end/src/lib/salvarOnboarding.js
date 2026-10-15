@@ -1,3 +1,4 @@
+import { NIVEIS } from '../config/categorias.js'
 import { consertaValido, modelosValidos } from '../pages/onboarding/fluxo.js'
 import { useAuthStore } from '../stores/useAuthStore.js'
 import { useOnboardingStore } from '../stores/useOnboardingStore.js'
@@ -8,16 +9,24 @@ import { supabase } from './supabase.js'
 // Categorias e defeito do radar viram as Configurações do Início (com conta, o
 // sincronizarConta grava em public.configuracoes). Antes do feed real (15), para
 // ele já abrir filtrado pelo radar, e de novo no fim. Os modelos (10b) e a meta
-// (13) vão junto: as respostas do onboarding são apagadas no fim, e é das
-// preferências que as Notificações e o card da meta do Dashboard leem.
+// (13) vão junto, e o raio (12) com o ponto de partida, para o filtro de raio
+// do Início: as respostas do onboarding são apagadas no fim, e é das
+// preferências que as Notificações e o card da meta do Dashboard leem. Os
+// níveis de oportunidade (10c) ligam ou desligam os e-mails de cada nível.
 export function aplicarRadar() {
   const r = useOnboardingStore.getState()
-  usePreferenciasStore.setState({
+  usePreferenciasStore.setState(({ notificacoes }) => ({
     categorias: r.categorias,
     mostrarDefeito: consertaValido(r).length > 0,
     modelosNotificacao: modelosValidos(r),
     metaMensal: r.meta,
-  })
+    raio: r.raio,
+    origem: r.lat != null || r.cidade ? { lat: r.lat, lng: r.lng, cidade: r.cidade, bairro: r.bairro } : null,
+    notificacoes: {
+      ...notificacoes,
+      ...Object.fromEntries(NIVEIS.map(({ value }) => [value, r.niveisAlerta.includes(value)])),
+    },
+  }))
 }
 
 // Leva as respostas do onboarding (guardadas no aparelho) para a conta, no fim
@@ -55,7 +64,8 @@ export async function salvarOnboarding(user) {
     tempo_resposta: r.tempoResposta,
     conserta: consertaValido(r),
     meta_lucro_mensal: r.meta > 0 ? r.meta : null,
-    plano: r.plano,
+    // O plano não vai daqui: só o servidor grava preferencias.plano (conta nova
+    // entra no Free, ver config/planos.js).
     cep: r.cep || null,
     // No banco, ~100 m (3 casas) bastam para o raio.
     lat: r.lat == null ? null : Math.round(r.lat * 1000) / 1000,
@@ -63,6 +73,5 @@ export async function salvarOnboarding(user) {
   })
   if (error) throw error
 
-  usePreferenciasStore.setState({ planoAtual: r.plano })
   useAuthStore.setState({ quizRespondido: true })
 }

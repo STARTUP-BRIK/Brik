@@ -47,14 +47,17 @@ const produtoKey = (p) => `${p.busca}|${p.categoria}|${p.condicao}|${p.estado}`;
 const rotulo = (p) => `${decodeURIComponent(p.busca)} (${p.categoria}, ${p.condicao}, ${p.estado.toUpperCase()})`;
 
 // node worker.js [busca ...] [--paginas N | --primeiras N] [--dry-run] [--headless]
+// node worker.js --verificar-strikes [--headless]
 //   --paginas N   -> as N ÚLTIMAS páginas da busca (o app.py raspa da última pra primeira)
 //   --primeiras N -> as N PRIMEIRAS páginas (anúncios mais recentes)
+//   --verificar-strikes -> não raspa: confere no OLX os anúncios com strike
 function parseArgs(argv) {
-    const opts = { buscas: [], paginas: null, primeiras: false, dryRun: false, headless: false };
+    const opts = { buscas: [], paginas: null, primeiras: false, dryRun: false, headless: false, verificarStrikes: false };
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
         if (arg === '--dry-run') opts.dryRun = true;
         else if (arg === '--headless') opts.headless = true;
+        else if (arg === '--verificar-strikes') opts.verificarStrikes = true;
         else if (/^--(paginas|primeiras)(=|$)/.test(arg)) {
             const flag = arg.split('=')[0];
             const valor = arg.includes('=') ? arg.split('=')[1] : argv[++i];
@@ -68,6 +71,9 @@ function parseArgs(argv) {
         } else {
             opts.buscas.push(arg.toLowerCase());
         }
+    }
+    if (opts.verificarStrikes && (opts.buscas.length > 0 || opts.paginas !== null || opts.dryRun)) {
+        throw new Error('--verificar-strikes não raspa: não combina com produtos, --paginas/--primeiras nem --dry-run.');
     }
     return opts;
 }

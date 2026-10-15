@@ -52,15 +52,17 @@ export function Linha({ titulo, detalhe, children }) {
 }
 
 // Interruptor liga/desliga. O rótulo vem do texto da linha (aria-label).
-export function Interruptor({ ligado, onChange, label }) {
+// `desativado`: aparece, mas não muda (ex.: recurso fora do plano).
+export function Interruptor({ ligado, onChange, label, desativado = false }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={ligado}
       aria-label={label}
+      disabled={desativado}
       onClick={() => onChange(!ligado)}
-      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${ligado ? 'bg-brik' : 'bg-line'}`}
+      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${ligado ? 'bg-brik' : 'bg-line'}`}
     >
       <span
         aria-hidden="true"

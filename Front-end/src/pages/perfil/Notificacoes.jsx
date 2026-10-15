@@ -1,26 +1,22 @@
 import { Fragment, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Grupo, Interruptor, Linha, Nota, SubPagina } from '../../components/SubPagina.jsx'
-import { CATEGORIAS } from '../../config/categorias.js'
+import { CATEGORIAS, NIVEIS } from '../../config/categorias.js'
 import { MODELOS, idsDaCategoria } from '../../config/modelos.js'
+import { planoPago } from '../../config/planos.js'
 import { usePreferenciasStore } from '../../stores/usePreferenciasStore.js'
 
-// Notificações. Por enquanto só guarda as escolhas: o envio dos avisos (push ou
-// e-mail) ainda não existe. Quando existir, ele lê estas mesmas chaves.
+// Notificações. Os avisos de oportunidade saem por e-mail, um por anúncio
+// (worker/notificacoes.js lê as chaves boa, otima e extraordinaria e os modelos
+// marcados abaixo). Estoque parado e novidades ainda não são enviados.
 const GRUPOS = [
   {
-    titulo: 'Oportunidades',
-    itens: [
-      {
-        key: 'oportunidades',
-        titulo: 'Novas oportunidades',
-        detalhe: 'Quando aparecer um bom negócio nas categorias que você escolheu nas Configurações.',
-      },
-      {
-        key: 'extraordinarias',
-        titulo: 'Negócios extraordinários',
-        detalhe: 'Aviso na hora para ofertas 30% ou mais abaixo do preço de mercado.',
-      },
-    ],
+    titulo: 'Oportunidades por e-mail',
+    itens: NIVEIS.map(({ value, label, desconto }) => ({
+      key: value,
+      titulo: label,
+      detalhe: `Anúncio novo ${desconto}% ou mais abaixo do preço de mercado, nos modelos que você acompanha.`,
+    })),
   },
   {
     titulo: 'Seu estoque',
@@ -147,17 +143,37 @@ function ModelosDeInteresse() {
 function Notificacoes() {
   const notificacoes = usePreferenciasStore((state) => state.notificacoes)
   const setNotificacao = usePreferenciasStore((state) => state.setNotificacao)
+  // Aviso de oportunidade é só dos planos pagos (o worker nem envia ao Free).
+  // No Free os interruptores aparecem desligados e travados; o que a pessoa
+  // escolheu fica guardado e volta a valer quando ela assinar.
+  const pago = planoPago(usePreferenciasStore((state) => state.planoAtual))
 
   return (
     <SubPagina titulo="Notificações" descricao="Escolha sobre o que o Brik vai te avisar.">
       {GRUPOS.map(({ titulo, itens }, i) => (
         <Fragment key={titulo}>
           <Grupo titulo={titulo}>
-            {itens.map(({ key, titulo: nome, detalhe }) => (
-              <Linha key={key} titulo={nome} detalhe={detalhe}>
-                <Interruptor ligado={notificacoes[key]} onChange={(ligada) => setNotificacao(key, ligada)} label={nome} />
-              </Linha>
-            ))}
+            {i === 0 && !pago && (
+              <li className="bg-surface-raise px-4 py-3 text-xs leading-snug text-ink/70">
+                Avisos de oportunidade por e-mail são dos planos Pro e Intermedium.{' '}
+                <Link to="/planos" viewTransition className="font-bold text-brik hover:underline">
+                  Ver planos
+                </Link>
+              </li>
+            )}
+            {itens.map(({ key, titulo: nome, detalhe }) => {
+              const bloqueado = i === 0 && !pago
+              return (
+                <Linha key={key} titulo={nome} detalhe={detalhe}>
+                  <Interruptor
+                    ligado={bloqueado ? false : notificacoes[key]}
+                    onChange={(ligada) => setNotificacao(key, ligada)}
+                    label={nome}
+                    desativado={bloqueado}
+                  />
+                </Linha>
+              )
+            })}
           </Grupo>
           {/* Logo depois das oportunidades: os modelos de que elas avisam. */}
           {i === 0 && <ModelosDeInteresse />}
@@ -165,8 +181,8 @@ function Notificacoes() {
       ))}
 
       <Nota>
-        Os avisos começam a chegar quando as notificações forem lançadas. Suas escolhas, incluindo
-        os modelos que você acompanha, já ficam salvas na sua conta.
+        Cada oportunidade chega em um e-mail separado, no endereço da sua conta. Produto parado e
+        novidades ainda não são enviados.
       </Nota>
     </SubPagina>
   )

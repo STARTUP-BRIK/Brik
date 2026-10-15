@@ -32,6 +32,7 @@ const {
     withScrapeCondition,
 } = require('./produtos');
 const { defeitoNoTitulo, mantemDefeituosos, planHistory, capOpportunityLevelDefeituoso } = require('./defeito');
+const { notificarAnuncios } = require('./notificacoes');
 const {
     profitPct,
     descriptionFromJsonLd,
@@ -134,13 +135,12 @@ const FAIXA_PRECO_PLAUSIVEL = {
 const DESCONTO_MAX_PLAUSIVEL = 0.85; // > 85% abaixo da mediana do segmento → descarta
 const ACIMA_MAX_PLAUSIVEL = 2.5;     // > 2,5x a mediana do segmento → descarta
 
-// Antes de apagar um anúncio por 3 strikes, o worker confirma direto no
-// OLX (abrindo a página no Chrome do scraper) se ele saiu mesmo do ar: a raspagem
-// perde anúncio ativo por re-ranqueamento/hiccup, não só por venda.
-// STRIKE_VERIFY=false volta ao comportamento antigo (apaga com 3 strikes sem confirmar).
-const VERIFY_STRIKES_ON_OLX = process.env.STRIKE_VERIFY !== 'false';
-// Máximo de verificações no OLX por ciclo (~7s cada); o excedente é verificado
-// nos ciclos seguintes (raspagem quebrada é barrada pela trava de cobertura).
+// Anúncio que some da raspagem completa leva 1 strike e só sai do banco quando
+// a verificação (node worker.js --verificar-strikes, action própria) abre a
+// página dele no OLX e confirma que saiu do ar: a raspagem perde anúncio ativo
+// por re-ranqueamento/hiccup, não só por venda.
+// Máximo de verificações no OLX por execução (~7s cada); o excedente fica com o
+// strike e é verificado na execução seguinte, mais antigos primeiro.
 const OLX_PROBE_MAX = 250;
 
 // Todo anúncio do feed (opportunity_level diferente de 'nenhuma') tem a descrição
@@ -839,6 +839,7 @@ async function processValidItems(validItems, category, mediaMap) {
     const anunciosRows = [];
     const historicoRows = [];
     const reclassified = []; // mesma URL, variant/condition novos: o histórico acompanha
+    const paraAvisar = []; // oportunidade nova ou que mudou de preço: candidata a aviso por e-mail
     const purgeHistoryUrls = []; // anúncio que passou a ter defeito: sai da base das médias
 
     for (const item of dedupedItems) {
@@ -946,6 +947,7 @@ async function processValidItems(validItems, category, mediaMap) {
         }
 
         anunciosRows.push(anuncioRow);
+        if ((isNew || priceChanged) && opportunityLevel !== 'nenhuma') paraAvisar.push(item.url);
     }
 
     if (anunciosRows.length > 0) {
@@ -999,7 +1001,7 @@ async function processValidItems(validItems, category, mediaMap) {
         console.log(`  ${reclassified.length} anúncio(s) reclassificado(s): histórico de preços acompanhou a nova variante.`);
     }
 
-    return dedupedItems.map((item) => item.url);
+    return { urls: dedupedItems.map((item) => item.url), paraAvisar };
 }
 
 // Extrai o ID numérico do anúncio a partir da URL canônica (/vi/<id>).
@@ -1023,9 +1025,9 @@ async function probeManyViaBrowser(rows, { headless = false } = {}) {
 
 // ------------------------------------------------------------------
 // Passo 6 — Tratar strikes: anúncios ativos dessa categoria que não
-// apareceram nesta raspagem (currentUrls) ganham +1 strike. Ao chegar
-// a 3, antes de apagar (hard delete), o worker confirma no OLX que o
-// anúncio realmente saiu do ar — anúncio ainda ativo volta a strikes=0.
+// apareceram nesta raspagem (currentUrls) ganham +1 strike. Aqui nada é
+// apagado: com 1 strike o anúncio já entra na fila da verificação
+// (verificarStrikes), que confirma no OLX se ele saiu do ar.
 // ------------------------------------------------------------------
 // O Supabase devolve no máximo 1000 linhas por consulta: sem paginar, o
 // passo de strikes só enxergava as primeiras 1000 do banco e o resto nunca
@@ -1058,7 +1060,7 @@ async function deleteActiveByUrl(urls, chunkSize = 40) {
     }
 }
 
-async function handleStrikes(category, currentUrls, { headless = false } = {}) {
+async function handleStrikes(category, currentUrls) {
     const activeList = await fetchAllActiveRows(category);
 
     const currentSet = new Set(currentUrls);
@@ -1093,78 +1095,101 @@ async function handleStrikes(category, currentUrls, { headless = false } = {}) {
         return;
     }
 
-    const toUpdate = [];        // { url, strikes }
-    const gateCandidates = [];  // atingiriam 3 strikes → passam pela verificação no OLX
+    // O contador continua subindo enquanto o anúncio seguir ausente (dá pra ver
+    // há quantos ciclos ele está na fila); smallint, então trava em 100.
+    await updateStrikes(missing.map((row) => ({ url: row.url, strikes: Math.min(row.strikes + 1, 100) })));
 
-    for (const row of missing) {
-        const newStrikes = row.strikes + 1;
-        if (newStrikes >= 3) {
-            gateCandidates.push(row);
-        } else {
-            toUpdate.push({ url: row.url, strikes: newStrikes });
-        }
-    }
+    const novos = missing.filter((row) => row.strikes === 0).length;
+    console.log(
+        `   Strikes: ${missing.length} ausentes (${novos} entraram agora na fila da verificação). ` +
+        'Quem sai do banco é a verificação (--verificar-strikes).'
+    );
+}
 
-    const toDelete = [];
-    let aliveCount = 0;
-    let inconclusiveCount = 0;
-
-    if (gateCandidates.length === 0) {
-        // nada a verificar
-    } else if (!VERIFY_STRIKES_ON_OLX) {
-        gateCandidates.forEach((row) => toDelete.push(row.url));
-    } else {
-        // Orçamento de verificações por ciclo (cada uma é uma ida ao OLX). O que
-        // passar disso fica em strikes=2 e é verificado nos próximos ciclos —
-        // nada é apagado sem confirmação, então não precisa travar tudo.
-        const toProbe = gateCandidates.slice(0, OLX_PROBE_MAX);
-        const adiados = gateCandidates.length - toProbe.length;
-        console.log(
-            `   Verificando ${toProbe.length} candidato(s) a exclusão direto no OLX` +
-            (adiados > 0 ? ` (${adiados} ficam pro próximo ciclo)` : '') + '...'
-        );
-        const verdicts = await probeManyViaBrowser(toProbe, { headless });
-        for (const row of toProbe) {
-            const verdict = verdicts.get(row.url);
-            if (verdict === 'gone') {
-                toDelete.push(row.url);
-            } else if (verdict === 'alive') {
-                aliveCount++;
-                toUpdate.push({ url: row.url, strikes: 0 }); // confirmado ativo → zera
-            } else {
-                inconclusiveCount++;
-                toUpdate.push({ url: row.url, strikes: 3 }); // trava em 3, re-verifica depois
-            }
-        }
-    }
-
-    // Uma atualização por valor de strike (em lotes), não uma por linha.
+// Uma atualização por valor de strike (em lotes), não uma por linha.
+async function updateStrikes(toUpdate, chunkSize = 40) {
     const porStrike = new Map();
     for (const { url, strikes } of toUpdate) {
         if (!porStrike.has(strikes)) porStrike.set(strikes, []);
         porStrike.get(strikes).push(url);
     }
-    const UPDATE_CHUNK = 40;
     for (const [strikes, urls] of porStrike) {
-        for (let i = 0; i < urls.length; i += UPDATE_CHUNK) {
+        for (let i = 0; i < urls.length; i += chunkSize) {
             const { error } = await supabase
                 .from('anuncios_ativos')
                 .update({ strikes })
-                .in('url', urls.slice(i, i + UPDATE_CHUNK));
+                .in('url', urls.slice(i, i + chunkSize));
 
             if (error) throw new Error(`Erro ao atualizar strikes (${strikes}): ${error.message}`);
         }
     }
+}
 
-    await deleteActiveByUrl(toDelete);
+// ------------------------------------------------------------------
+// Verificação dos strikes (node worker.js --verificar-strikes): abre no OLX
+// cada anúncio com strike >= 1. Saiu do ar (vendido/removido) → apaga de
+// anuncios_ativos; ainda no ar → strike zerado; inconclusivo (bloqueio,
+// timeout) → fica com o strike e entra na próxima verificação. Nada é
+// apagado sem a página do OLX confirmar.
+// ------------------------------------------------------------------
+async function fetchStruckRows(pageSize = 1000) {
+    const rows = [];
+    for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+            .from('anuncios_ativos')
+            .select('url, strikes, category')
+            .gte('strikes', 1)
+            .order('last_seen_at', { ascending: true }) // há mais tempo sumido primeiro
+            .order('id')
+            .range(from, from + pageSize - 1);
+
+        if (error) throw new Error(`Erro ao consultar anúncios com strike: ${error.message}`);
+        rows.push(...data);
+        if (data.length < pageSize) break;
+    }
+    return rows;
+}
+
+async function verificarStrikes({ headless = false } = {}) {
+    const fila = await fetchStruckRows();
+    if (fila.length === 0) {
+        console.log('Nenhum anúncio com strike: nada a verificar.');
+        return;
+    }
+
+    const toProbe = fila.slice(0, OLX_PROBE_MAX);
+    const adiados = fila.length - toProbe.length;
+    console.log(
+        `Verificando ${toProbe.length} anúncio(s) com strike direto no OLX` +
+        (adiados > 0 ? ` (${adiados} ficam pra próxima verificação)` : '') + '...'
+    );
+
+    const verdicts = await probeManyViaBrowser(toProbe, { headless });
+    const toDelete = [];
+    const alive = [];
+    let inconclusiveCount = 0;
+    for (const row of toProbe) {
+        const verdict = verdicts.get(row.url);
+        if (verdict === 'gone') toDelete.push(row);
+        else if (verdict === 'alive') alive.push({ url: row.url, strikes: 0 });
+        else inconclusiveCount++;
+    }
+
+    await updateStrikes(alive);
+    await deleteActiveByUrl(toDelete.map((row) => row.url));
 
     console.log(
-        `   Strikes: ${missing.length} ausentes | ${toDelete.length} removidos (confirmados fora do ar) | ` +
-        `${aliveCount} ainda ativos (strike zerado) | ${inconclusiveCount} inconclusivos (adiado).`
+        `\nVerificação: ${toDelete.length} removidos (confirmados fora do ar) | ` +
+        `${alive.length} ainda no ar (strike zerado) | ${inconclusiveCount} inconclusivos (ficam na fila).`
     );
     if (toDelete.length > 0) {
-        console.log(`   Removidos (${toDelete.length}), primeiros 20:`);
-        toDelete.slice(0, 20).forEach((url) => console.log(`     ${url}`));
+        console.log(`Removidos (${toDelete.length}), primeiros 20:`);
+        toDelete.slice(0, 20).forEach((row) => console.log(`  [${row.category}] ${row.url}`));
+    }
+    // Tudo inconclusivo = o OLX barrou a verificação inteira: falha visível no Actions.
+    if (toProbe.length > 0 && inconclusiveCount === toProbe.length) {
+        console.error('⚠ Nenhum anúncio pôde ser verificado (provável bloqueio do OLX).');
+        process.exitCode = 1;
     }
 }
 
@@ -1517,11 +1542,22 @@ async function processProduct(category, rawItemsRaw, condition, defeitoUrls = []
         const mediaMap = await getMediaCache(validItems);
 
         console.log('5. Gravando em anuncios_ativos e historico_precos...');
-        await processValidItems(validItems, category, mediaMap);
+        const { paraAvisar } = await processValidItems(validItems, category, mediaMap);
 
         if (VERIFY_DESCRIPTIONS) {
             console.log('5b. Verificando descrição dos anúncios do feed...');
             await verifyFeedDescriptions(category, leituraDescricao);
+        }
+
+        // Depois do 5b, que pode rebaixar ou tirar anúncio do feed. Aviso que
+        // falha não derruba a raspagem: os anúncios já estão gravados.
+        if (paraAvisar.length > 0) {
+            console.log(`5c. Avisando por e-mail (${paraAvisar.length} oportunidade(s) nova(s) ou com preço novo)...`);
+            try {
+                await notificarAnuncios(supabase, paraAvisar);
+            } catch (err) {
+                console.warn(`   ⚠ Avisos por e-mail falharam: ${err.message}`);
+            }
         }
     }
 
@@ -1568,9 +1604,14 @@ async function rodarProduto(produto, { headless, dryRun, tracker }) {
 //   node worker.js --paginas 1     -> teste rápido (última página); raspagem parcial nunca aplica strikes
 //   node worker.js --primeiras 5   -> só as 5 primeiras páginas (anúncios novos); também sem strikes
 //   node worker.js --dry-run       -> só raspa e valida; não usa IA nem grava no banco
+//   node worker.js --verificar-strikes -> não raspa: confere no OLX quem tem strike e apaga os vendidos
 async function run() {
     const opts = parseArgs(process.argv.slice(2));
     const headless = opts.headless || process.env.SCRAPER_HEADLESS === 'true';
+    if (opts.verificarStrikes) {
+        await verificarStrikes({ headless });
+        return;
+    }
     const { selecionados, parcial } = selectProdutos(PRODUTOS, opts);
     const categoriaDe = (p) => CATEGORIA_OLX_PARA_INTERNA[p.categoria];
     const tracker = createStrikeTracker(PRODUTOS, categoriaDe);
@@ -1632,7 +1673,7 @@ async function run() {
         const { prontas, puladas } = tracker.resolve({ parcial });
         for (const { category, urls } of prontas) {
             console.log(`   Categoria ${category}: ${urls.length} anúncios vistos no ciclo.`);
-            await handleStrikes(category, urls, { headless });
+            await handleStrikes(category, urls);
         }
         for (const { category, motivo } of puladas) {
             console.warn(`   ⚠ Strikes PULADOS (${category}): ${motivo}.`);
