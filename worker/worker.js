@@ -112,6 +112,10 @@ const llmIndisponiveis = new Set();
 const PYTHON_EXECUTABLE = process.env.PYTHON_EXECUTABLE || 'python';
 const PYTHON_SCRIPT_PATH = process.env.PYTHON_SCRIPT_PATH;
 const PYTHON_TIMEOUT_MS = Number(process.env.PYTHON_TIMEOUT_MS) || 30 * 60 * 1000; // 30 min de segurança, ajuste via env se precisar
+// Quantas raspagens (Chromes) rodam ao mesmo tempo, e o intervalo entre o início
+// de cada uma. 1 = em sequência, como era antes.
+const SCRAPER_PARALELO = Math.max(1, Math.floor(Number(process.env.SCRAPER_PARALELO)) || 3);
+const SCRAPER_ESCALONAMENTO_MS = 10000;
 
 const BATCH_SIZE = 25;
 
@@ -175,16 +179,33 @@ const CATEGORIA_OLX_PARA_INTERNA = {
 // "scrapping python\app.py") funciona sem escaping manual e sem risco de
 // injeção de comando.
 // ------------------------------------------------------------------
-async function runPythonScript(scriptArgs) {
+// Repassa a saída do Python linha a linha com o prefixo (várias raspagens rodam
+// ao mesmo tempo: sem prefixo por linha, os logs se misturariam sem dono).
+function prefixarLinhas(destino, prefixo) {
+    let resto = '';
+    return {
+        escrever(chunk) {
+            const linhas = (resto + chunk).split(/\r?\n/);
+            resto = linhas.pop();
+            linhas.forEach((linha) => destino.write(`${prefixo} ${linha}\n`));
+        },
+        fim() {
+            if (resto) destino.write(`${prefixo} ${resto}\n`);
+            resto = '';
+        },
+    };
+}
+
+async function runPythonScript(scriptArgs, { tag = 'scraper' } = {}) {
     if (!PYTHON_SCRIPT_PATH) {
         throw new Error('PYTHON_SCRIPT_PATH não está definido. Configure o caminho do app.py no .env.');
     }
 
     const scriptDir = path.dirname(PYTHON_SCRIPT_PATH);
-    const startedAt = Date.now();
     const args = [PYTHON_SCRIPT_PATH, ...scriptArgs];
+    const prefixo = `[${tag}]`;
 
-    console.log(`[scraper] Iniciando: ${PYTHON_EXECUTABLE} ${args.map((a) => `"${a}"`).join(' ')}`);
+    console.log(`${prefixo} Iniciando: ${PYTHON_EXECUTABLE} ${args.map((a) => `"${a}"`).join(' ')}`);
 
     let stdoutText = '';
     await new Promise((resolve, reject) => {
@@ -195,18 +216,20 @@ async function runPythonScript(scriptArgs) {
             env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
         });
         let timedOut = false;
+        const saida = prefixarLinhas(process.stdout, prefixo);
+        const erros = prefixarLinhas(process.stderr, prefixo);
 
         const timer = setTimeout(() => {
             timedOut = true;
-            console.error(`[scraper] Excedeu o timeout de ${PYTHON_TIMEOUT_MS / 1000}s — encerrando processo.`);
+            console.error(`${prefixo} Excedeu o timeout de ${PYTHON_TIMEOUT_MS / 1000}s — encerrando processo.`);
             child.kill();
         }, PYTHON_TIMEOUT_MS);
 
         child.stdout.on('data', (chunk) => {
             stdoutText += chunk;
-            process.stdout.write(`[scraper] ${chunk}`);
+            saida.escrever(chunk);
         });
-        child.stderr.on('data', (chunk) => process.stderr.write(`[scraper] ${chunk}`));
+        child.stderr.on('data', (chunk) => erros.escrever(chunk));
 
         child.on('error', (err) => {
             clearTimeout(timer);
@@ -215,6 +238,8 @@ async function runPythonScript(scriptArgs) {
 
         child.on('close', (code) => {
             clearTimeout(timer);
+            saida.fim();
+            erros.fim();
             if (timedOut) {
                 reject(new Error(`Script Python excedeu o timeout de ${PYTHON_TIMEOUT_MS / 1000}s e foi encerrado.`));
             } else if (code !== 0) {
@@ -225,17 +250,15 @@ async function runPythonScript(scriptArgs) {
         });
     });
 
-    console.log('[scraper] Processo Python finalizado. Procurando JSON gerado...');
-
-    // O app.py anuncia o arquivo que gerou; o "JSON mais recente" fica só de
-    // reserva (com vários produtos em sequência, adivinhar seria arriscado).
-    const anunciado = parseResultPath(stdoutText);
-    const jsonFile = anunciado && fs.existsSync(anunciado) ? anunciado : findLatestJsonFile(scriptDir, startedAt);
-    if (!jsonFile) {
-        throw new Error(`Nenhum arquivo .json encontrado em "${scriptDir}" criado durante esta execução.`);
+    // O app.py anuncia o arquivo que gerou. Sem o anúncio não há reserva: com
+    // várias raspagens ao mesmo tempo, "o JSON mais recente da pasta" pode ser de
+    // outro produto.
+    const jsonFile = parseResultPath(stdoutText);
+    if (!jsonFile || !fs.existsSync(jsonFile)) {
+        throw new Error(`O script Python terminou sem anunciar um JSON existente (RESULTADO_JSON=${jsonFile ?? 'ausente'}).`);
     }
 
-    console.log(`[scraper] Lendo resultado: ${jsonFile}`);
+    console.log(`${prefixo} Lendo resultado: ${jsonFile}`);
     const raw = fs.readFileSync(jsonFile, 'utf-8');
 
     let payload;
@@ -250,25 +273,7 @@ async function runPythonScript(scriptArgs) {
 
 // Raspagem de UM produto (busca no OLX).
 async function runPythonScraper(produto, { headless = false } = {}) {
-    return runPythonScript(scraperArgs(produto, { headless }));
-}
-
-// O app.py nomeia o arquivo de saída como busca-estado-condicao-timestamp.json
-// — em vez de replicar esse formato aqui (e desincronizar se o script
-// mudar o padrão), pegamos o .json mais recente na pasta de saída criado
-// depois do início desta execução.
-function findLatestJsonFile(dir, sinceMs) {
-    const candidates = fs.readdirSync(dir)
-        .filter((name) => name.endsWith('.json'))
-        .map((name) => {
-            const fullPath = path.join(dir, name);
-            return { fullPath, mtimeMs: fs.statSync(fullPath).mtimeMs };
-        })
-        .filter((file) => file.mtimeMs >= sinceMs - 2000); // margem pra diferença de clock
-
-    if (candidates.length === 0) return null;
-    candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
-    return candidates[0].fullPath;
+    return runPythonScript(scraperArgs(produto, { headless }), { tag: `scraper:${produto.busca}` });
 }
 
 // O campo Imagem vem do atributo srcset do <img> (ex: "url1 1x, url2 2x"),
@@ -1286,7 +1291,7 @@ async function readAdPagesViaBrowser(links, { headless = false } = {}) {
     const entrada = path.join(os.tmpdir(), `brik-anuncios-${process.pid}-${Date.now()}.json`);
     fs.writeFileSync(entrada, JSON.stringify(links));
     try {
-        const { resultados = [] } = await runPythonScript(['--anuncios', entrada, ...(headless ? ['--headless'] : [])]);
+        const { resultados = [] } = await runPythonScript(['--anuncios', entrada, ...(headless ? ['--headless'] : [])], { tag: 'scraper:anuncios' });
         resultados.forEach((r) => paginas.set(r.link, r));
     } catch (err) {
         console.error(`  ⚠ Falha ao abrir as páginas de anúncio pelo navegador: ${err.message}`);
@@ -1564,20 +1569,17 @@ async function processProduct(category, rawItemsRaw, condition, defeitoUrls = []
     return { total: rawItems.length, gravados: validItems.length };
 }
 
-// Raspa, valida e grava UM produto; devolve a linha do resumo do ciclo. Erro na
-// raspagem (antes de gravar qualquer coisa) sai com err.naRaspagem = true.
-async function rodarProduto(produto, { headless, dryRun, tracker }) {
+// Passo 1 de UM produto: raspa e valida. Não grava nada, então pode rodar ao
+// mesmo tempo que outras raspagens e ser repetido sem efeito colateral.
+async function rasparProduto(produto, { headless }) {
+    console.log(`1. Raspando ${rotulo(produto)}...`);
+    const payload = await runPythonScraper(produto, { headless });
+    return { payload, dados: mapAndValidateScraperOutput(payload) };
+}
+
+// Passos 2–5 de UM produto já raspado; devolve a linha do resumo do ciclo.
+async function gravarProduto(produto, { payload, dados }, { headless, dryRun, tracker }) {
     const nome = rotulo(produto);
-    let payload;
-    let dados;
-    try {
-        console.log('1. Rodando script Python de raspagem...');
-        payload = await runPythonScraper(produto, { headless });
-        dados = mapAndValidateScraperOutput(payload);
-    } catch (err) {
-        err.naRaspagem = true;
-        throw err;
-    }
     const { category, items, seenUrls, defeitoUrls, linksOlx, condition } = dados;
     // JSON de versão antiga do scraper não tem o campo: assume completo.
     const completo = payload.completo !== false;
@@ -1594,8 +1596,35 @@ async function rodarProduto(produto, { headless, dryRun, tracker }) {
     return { nome, ok: true, detalhe: `${r.total} raspados, ${r.gravados} no banco`, completo };
 }
 
-// Ciclo completo: raspa e grava cada produto de PRODUTOS em sequência — quando
-// um termina, o próximo já começa — e só no fim aplica os strikes.
+// Raspa os produtos com até `limite` Chromes ao mesmo tempo (cada um pega o
+// próximo da fila quando termina) e entrega cada raspagem a `aoRaspar` assim que
+// ela acaba. As entregas rodam uma de cada vez, na ordem em que as raspagens
+// terminam: a gravação (IA, banco, descrições) segue sequencial como antes, só
+// que sobreposta às raspagens que ainda estão rodando. As faixas começam
+// escalonadas pra não abrir todos os Chromes no mesmo instante no OLX.
+// aoRaspar recebe { resultado } ou { erro } e não pode rejeitar.
+async function rasparEmParalelo(produtos, { limite, headless }, aoRaspar) {
+    const fila = [...produtos];
+    let entregas = Promise.resolve();
+    const faixa = async (n) => {
+        await new Promise((r) => setTimeout(r, n * SCRAPER_ESCALONAMENTO_MS));
+        while (fila.length > 0) {
+            const produto = fila.shift();
+            const desfecho = await rasparProduto(produto, { headless }).then(
+                (resultado) => ({ resultado }),
+                (erro) => ({ erro })
+            );
+            entregas = entregas.then(() => aoRaspar(produto, desfecho));
+        }
+    };
+    const faixas = Math.min(limite, produtos.length);
+    await Promise.all(Array.from({ length: faixas }, (_, n) => faixa(n)));
+    await entregas;
+}
+
+// Ciclo completo: raspa os produtos de PRODUTOS (vários ao mesmo tempo, ver
+// rasparEmParalelo), grava cada um quando a raspagem dele termina e só no fim
+// aplica os strikes.
 //
 // Uso: node worker.js [busca ...] [--paginas N | --primeiras N] [--dry-run] [--headless]
 //   node worker.js                 -> todos os produtos
@@ -1627,6 +1656,7 @@ async function run() {
     }
     console.log(
         `Ciclo com ${selecionados.length} produto(s): ${selecionados.map((p) => p.busca).join(', ')}` +
+        ` (até ${SCRAPER_PARALELO} raspagem(ns) ao mesmo tempo)` +
         `${opts.dryRun ? ' [DRY-RUN]' : ''}` +
         `${parcial ? ` [${opts.primeiras ? 'primeiras' : 'últimas'} ${opts.paginas} página(s): raspagem parcial, sem strikes]` : ''}`
     );
@@ -1640,32 +1670,44 @@ async function run() {
         resumo.push({ nome: rotulo(produto), ok: false, detalhe: err.message });
     };
 
-    // Raspagem que falhou (no Actions, o primeiro produto do ciclo costuma estourar
-    // o timeout na página 1 enquanto os seguintes passam) é repetida uma vez no fim
-    // do ciclo, com um Chrome novo. Só a raspagem: nessa etapa nada foi gravado
-    // ainda, então repetir não tem efeito colateral.
+    // Raspagem que falhou ou veio incompleta (no Actions, o Cloudflare costuma barrar
+    // a página 1 de um Chrome novo; sem ela a paginação não é descoberta e só a
+    // página 1 é raspada) é repetida uma vez no fim do ciclo, com um Chrome novo.
+    // Só a raspagem: nessa etapa nada foi gravado ainda, então repetir não tem
+    // efeito colateral. Na última tentativa, a incompleta é gravada como está (e a
+    // categoria fica sem strike).
     const ctx = { headless, dryRun: opts.dryRun, tracker };
-    const repetir = [];
-    for (const [i, produto] of selecionados.entries()) {
-        console.log(`\n=== [${i + 1}/${selecionados.length}] ${rotulo(produto)} ===`);
-        try {
-            resumo.push(await rodarProduto(produto, ctx));
-        } catch (err) {
-            if (!err.naRaspagem) {
-                registrarFalha(produto, err);
-                continue;
+    const gravados = new Set();
+    const gravar = (ultimaTentativa, repetir) => async (produto, { resultado, erro }) => {
+        if (erro) {
+            if (ultimaTentativa) {
+                registrarFalha(produto, erro);
+            } else {
+                console.error(`\nFalha na raspagem de "${rotulo(produto)}" (nova tentativa no fim do ciclo):`, erro.message);
+                repetir.push(produto);
             }
-            console.error(`\nFalha na raspagem de "${rotulo(produto)}" (nova tentativa no fim do ciclo):`, err.message);
-            repetir.push(produto);
+            return;
         }
-    }
-    for (const produto of repetir) {
-        console.log(`\n=== [nova tentativa] ${rotulo(produto)} ===`);
+        if (!ultimaTentativa && resultado.payload.completo === false) {
+            const { paginas_raspadas: ok = '?', paginas_planejadas: total = '?' } = resultado.payload;
+            console.warn(`\nRaspagem incompleta de "${rotulo(produto)}" (${ok}/${total} páginas): nova tentativa no fim do ciclo.`);
+            repetir.push(produto);
+            return;
+        }
+        gravados.add(produto);
+        console.log(`\n=== [gravando ${gravados.size}/${selecionados.length}] ${rotulo(produto)} ===`);
         try {
-            resumo.push(await rodarProduto(produto, ctx));
+            resumo.push(await gravarProduto(produto, resultado, ctx));
         } catch (err) {
             registrarFalha(produto, err);
         }
+    };
+    const repetir = [];
+    const raspagem = { limite: SCRAPER_PARALELO, headless };
+    await rasparEmParalelo(selecionados, raspagem, gravar(false, repetir));
+    if (repetir.length > 0) {
+        console.log(`\n=== [nova tentativa] ${repetir.map(rotulo).join(', ')} ===`);
+        await rasparEmParalelo(repetir, raspagem, gravar(true));
     }
 
     if (!opts.dryRun) {

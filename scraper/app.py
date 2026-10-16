@@ -55,6 +55,12 @@ PROXY_SENHA = ''
 # Ex: [5, 15] = tenta de novo após 5s, se falhar de novo tenta após 15s.
 BACKOFF_SEGUNDOS = [5, 15]
 
+# A página 1 é a 1ª navegação de um Chrome novo, e no Actions o Cloudflare costuma
+# barrá-la por uns 20-30s antes de liberar (medido em 16/10: iPhone e PS5 passaram
+# na 4ª tentativa). Sem ela não dá pra descobrir a paginação e a raspagem sai
+# incompleta, então aqui vale esperar mais.
+BACKOFF_PAGINA_1 = [5, 15, 30, 60]
+
 # Aborta a execução inteira se este número de páginas seguidas falhar
 # (mesmo depois de esgotar os retries de cada uma).
 MAX_FALHAS_CONSECUTIVAS = 3
@@ -269,26 +275,29 @@ def descobrir_ultima_pagina(driver) -> Optional[int]:
         esperar_conteudo(driver, "//a[contains(@href,'?o=') or contains(@href,'&o=')]", 20)
         sleep(0.5)  # pequena margem para todos os links renderizarem
 
-        # ── Estratégia 1: link com texto "Última página" ──────────────────────
-        candidatos = driver.find_elements(
-            By.XPATH, "//a[contains(translate(text(),'ÚÁÉÍÓ','uaeio'),'ltima p')]"
+        # Texto e href de todos os links lidos numa chamada só: o OLX redesenha a
+        # paginação depois de carregar, e um elemento achado antes do redesenho dava
+        # "stale element reference" ao ler o href.
+        links = driver.execute_script(
+            "return Array.from(document.querySelectorAll('a'), a => [a.textContent || '', a.href || ''])"
         )
+
+        # ── Estratégia 1: link com texto "Última página" ──────────────────────
+        candidatos = [(texto, href) for texto, href in links
+                      if 'ltima p' in unicodedata.normalize('NFKD', texto).lower()]
         logger.info(f'[paginação] Estratégia 1: {len(candidatos)} candidato(s) encontrado(s) para "Última página"')
-        for c in candidatos:
-            logger.info(f'  texto="{c.text}" href="{c.get_attribute("href")}"')
+        for texto, href in candidatos:
+            logger.info(f'  texto="{texto.strip()}" href="{href}"')
 
         if candidatos:
-            href = candidatos[-1].get_attribute('href') or ''
-            m = re.search(r'[?&]o=(\d+)', href)
+            m = re.search(r'[?&]o=(\d+)', candidatos[-1][1])
             if m:
                 logger.info(f'Última página detectada pelo botão "Última página": o={m.group(1)}')
                 return int(m.group(1))
 
         # ── Estratégia 2: maior valor de ?o= entre todos os links da página ──
-        todos_links = driver.find_elements(By.TAG_NAME, 'a')
         numeros = []
-        for a in todos_links:
-            href = a.get_attribute('href') or ''
+        for _, href in links:
             m = re.search(r'[?&]o=(\d+)', href)
             if m:
                 numeros.append(int(m.group(1)))
@@ -307,11 +316,12 @@ def descobrir_ultima_pagina(driver) -> Optional[int]:
 
 def descobrir_ultima_pagina_com_retry(driver, url: str) -> Optional[int]:
     """Abre a página 1 e descobre a última página. Se o Cloudflare barrar, limpa os
-    cookies e tenta de novo com o mesmo backoff das páginas."""
-    esperas = [0] + BACKOFF_SEGUNDOS
+    cookies e tenta de novo, com mais paciência que nas outras páginas (ver
+    BACKOFF_PAGINA_1)."""
+    esperas = [0] + BACKOFF_PAGINA_1
     for tentativa, espera in enumerate(esperas, start=1):
         if espera:
-            logger.warning(f'Retry {tentativa - 1}/{len(BACKOFF_SEGUNDOS)} da página 1 em {espera}s '
+            logger.warning(f'Retry {tentativa - 1}/{len(BACKOFF_PAGINA_1)} da página 1 em {espera}s '
                            f'(cookies limpos)...')
             sleep(espera)
             limpar_cookies(driver)
@@ -326,36 +336,55 @@ def descobrir_ultima_pagina_com_retry(driver, url: str) -> Optional[int]:
     return None
 
 
+# Lê todos os cards da página numa chamada só ao navegador (cada .text /
+# get_attribute do Selenium é uma ida e volta ao driver: eram ~300 por página).
+# Cada campo é buscado DENTRO do card (<section class="olx-adcard">), então um
+# card sem imagem ou sem data não desalinha os campos dos cards seguintes.
+JS_LER_CARDS = """
+const texto = (card, seletor) => {
+    const el = card.querySelector(seletor);
+    return el ? (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim() : '';
+};
+return Array.from(document.querySelectorAll('section.olx-adcard'))
+    .map((card) => {
+        const link = card.querySelector('a.olx-adcard__link');
+        if (!link) return null;
+        const imagem = card.querySelector('source[type="image/jpeg"]');
+        return {
+            titulo: texto(card, '.olx-adcard__title'),
+            preco: texto(card, 'h3.olx-adcard__price'),
+            local: texto(card, '.olx-adcard__location'),
+            data: texto(card, '.olx-adcard__date'),
+            imagem: imagem ? imagem.getAttribute('srcset') || '' : '',
+            link: link.href,
+        };
+    })
+    .filter(Boolean);
+"""
+
+
 def raspar_pagina(driver, condicao: str) -> list[dict]:
     """Extrai todos os anúncios da página atual."""
     if driver.find_elements(By.XPATH, "//div[contains(@class,'AdNotFound')]"):
         raise SemMaisResultados()
 
+    # Os cards vêm prontos no HTML do servidor: com o 1º no DOM (page_load_strategy
+    # 'eager' = HTML inteiro já lido), os outros também estão, sem pausa pra renderizar.
     esperar_conteudo(driver, "//a[@class='olx-adcard__link']", 30)
-    sleep(random.uniform(1, 2))  # pequena pausa para JS terminar de renderizar
 
-    titulos = driver.find_elements(By.XPATH, "//h2[contains(@class,'olx-adcard__title')]")
-    precos  = driver.find_elements(By.XPATH, "//h3[contains(@class,'olx-adcard__price')]")
-    locais  = driver.find_elements(By.XPATH, "//p[contains(@class,'olx-adcard__location')]")
-    datas   = driver.find_elements(By.XPATH, "//p[contains(@class,'olx-adcard__date')]")
-    imagens = driver.find_elements(By.XPATH, "//source[@type='image/jpeg']")
-    links   = driver.find_elements(By.XPATH, "//a[@class='olx-adcard__link']")
-
-    anuncios = []
-    for i, link in enumerate(links):
-        preco_raw = precos[i].text if i < len(precos) else ''
-        anuncio = {
-            'Titulo':    titulos[i].text                    if i < len(titulos) else '',
-            'Preco':     parse_preco(preco_raw),
-            'Preco_Raw': preco_raw,
-            'Local':     locais[i].text                     if i < len(locais)  else '',
-            'Data':      normalizar_data(datas[i].text)     if i < len(datas)   else '',
-            'Imagem':    imagens[i].get_attribute('srcset') if i < len(imagens) else '',
-            'Link':      link.get_attribute('href'),
+    return [
+        {
+            'Titulo':    card['titulo'],
+            'Preco':     parse_preco(card['preco']),
+            'Preco_Raw': card['preco'],
+            'Local':     card['local'],
+            'Data':      normalizar_data(card['data']),
+            'Imagem':    card['imagem'],
+            'Link':      card['link'],
             'Condicao':  condicao,
         }
-        anuncios.append(anuncio)
-    return anuncios
+        for card in driver.execute_script(JS_LER_CARDS)
+    ]
 
 
 def raspar_pagina_com_retry(driver, url: str, condicao: str) -> Optional[list[dict]]:
