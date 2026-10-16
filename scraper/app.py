@@ -55,6 +55,12 @@ PROXY_SENHA = ''
 # Ex: [5, 15] = tenta de novo após 5s, se falhar de novo tenta após 15s.
 BACKOFF_SEGUNDOS = [5, 15]
 
+# A página 1 é a 1ª navegação de um Chrome novo, e no Actions o Cloudflare costuma
+# barrá-la por uns 20-30s antes de liberar (medido em 16/10: iPhone e PS5 passaram
+# na 4ª tentativa). Sem ela não dá pra descobrir a paginação e a raspagem sai
+# incompleta, então aqui vale esperar mais.
+BACKOFF_PAGINA_1 = [5, 15, 30, 60]
+
 # Aborta a execução inteira se este número de páginas seguidas falhar
 # (mesmo depois de esgotar os retries de cada uma).
 MAX_FALHAS_CONSECUTIVAS = 3
@@ -269,26 +275,29 @@ def descobrir_ultima_pagina(driver) -> Optional[int]:
         esperar_conteudo(driver, "//a[contains(@href,'?o=') or contains(@href,'&o=')]", 20)
         sleep(0.5)  # pequena margem para todos os links renderizarem
 
-        # ── Estratégia 1: link com texto "Última página" ──────────────────────
-        candidatos = driver.find_elements(
-            By.XPATH, "//a[contains(translate(text(),'ÚÁÉÍÓ','uaeio'),'ltima p')]"
+        # Texto e href de todos os links lidos numa chamada só: o OLX redesenha a
+        # paginação depois de carregar, e um elemento achado antes do redesenho dava
+        # "stale element reference" ao ler o href.
+        links = driver.execute_script(
+            "return Array.from(document.querySelectorAll('a'), a => [a.textContent || '', a.href || ''])"
         )
+
+        # ── Estratégia 1: link com texto "Última página" ──────────────────────
+        candidatos = [(texto, href) for texto, href in links
+                      if 'ltima p' in unicodedata.normalize('NFKD', texto).lower()]
         logger.info(f'[paginação] Estratégia 1: {len(candidatos)} candidato(s) encontrado(s) para "Última página"')
-        for c in candidatos:
-            logger.info(f'  texto="{c.text}" href="{c.get_attribute("href")}"')
+        for texto, href in candidatos:
+            logger.info(f'  texto="{texto.strip()}" href="{href}"')
 
         if candidatos:
-            href = candidatos[-1].get_attribute('href') or ''
-            m = re.search(r'[?&]o=(\d+)', href)
+            m = re.search(r'[?&]o=(\d+)', candidatos[-1][1])
             if m:
                 logger.info(f'Última página detectada pelo botão "Última página": o={m.group(1)}')
                 return int(m.group(1))
 
         # ── Estratégia 2: maior valor de ?o= entre todos os links da página ──
-        todos_links = driver.find_elements(By.TAG_NAME, 'a')
         numeros = []
-        for a in todos_links:
-            href = a.get_attribute('href') or ''
+        for _, href in links:
             m = re.search(r'[?&]o=(\d+)', href)
             if m:
                 numeros.append(int(m.group(1)))
@@ -307,11 +316,12 @@ def descobrir_ultima_pagina(driver) -> Optional[int]:
 
 def descobrir_ultima_pagina_com_retry(driver, url: str) -> Optional[int]:
     """Abre a página 1 e descobre a última página. Se o Cloudflare barrar, limpa os
-    cookies e tenta de novo com o mesmo backoff das páginas."""
-    esperas = [0] + BACKOFF_SEGUNDOS
+    cookies e tenta de novo, com mais paciência que nas outras páginas (ver
+    BACKOFF_PAGINA_1)."""
+    esperas = [0] + BACKOFF_PAGINA_1
     for tentativa, espera in enumerate(esperas, start=1):
         if espera:
-            logger.warning(f'Retry {tentativa - 1}/{len(BACKOFF_SEGUNDOS)} da página 1 em {espera}s '
+            logger.warning(f'Retry {tentativa - 1}/{len(BACKOFF_PAGINA_1)} da página 1 em {espera}s '
                            f'(cookies limpos)...')
             sleep(espera)
             limpar_cookies(driver)

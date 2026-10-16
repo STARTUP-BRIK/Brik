@@ -1670,10 +1670,12 @@ async function run() {
         resumo.push({ nome: rotulo(produto), ok: false, detalhe: err.message });
     };
 
-    // Raspagem que falhou (no Actions, o primeiro produto do ciclo costuma estourar
-    // o timeout na página 1 enquanto os seguintes passam) é repetida uma vez no fim
-    // do ciclo, com um Chrome novo. Só a raspagem: nessa etapa nada foi gravado
-    // ainda, então repetir não tem efeito colateral.
+    // Raspagem que falhou ou veio incompleta (no Actions, o Cloudflare costuma barrar
+    // a página 1 de um Chrome novo; sem ela a paginação não é descoberta e só a
+    // página 1 é raspada) é repetida uma vez no fim do ciclo, com um Chrome novo.
+    // Só a raspagem: nessa etapa nada foi gravado ainda, então repetir não tem
+    // efeito colateral. Na última tentativa, a incompleta é gravada como está (e a
+    // categoria fica sem strike).
     const ctx = { headless, dryRun: opts.dryRun, tracker };
     const gravados = new Set();
     const gravar = (ultimaTentativa, repetir) => async (produto, { resultado, erro }) => {
@@ -1684,6 +1686,12 @@ async function run() {
                 console.error(`\nFalha na raspagem de "${rotulo(produto)}" (nova tentativa no fim do ciclo):`, erro.message);
                 repetir.push(produto);
             }
+            return;
+        }
+        if (!ultimaTentativa && resultado.payload.completo === false) {
+            const { paginas_raspadas: ok = '?', paginas_planejadas: total = '?' } = resultado.payload;
+            console.warn(`\nRaspagem incompleta de "${rotulo(produto)}" (${ok}/${total} páginas): nova tentativa no fim do ciclo.`);
+            repetir.push(produto);
             return;
         }
         gravados.add(produto);
