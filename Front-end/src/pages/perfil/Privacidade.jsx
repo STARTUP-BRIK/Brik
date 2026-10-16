@@ -21,7 +21,13 @@ function Privacidade() {
 
       <Grupo titulo="Sua conta">
         <Linha titulo="Alterar senha">
-          <EmBreveSelo />
+          <Link
+            to="/perfil/alterar-senha"
+            viewTransition
+            className="shrink-0 rounded-full bg-brik px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
+          >
+            Alterar
+          </Link>
         </Linha>
         <Linha titulo="Baixar meus dados" detalhe="Uma cópia do seu estoque e dos seus cálculos.">
           <EmBreveSelo />

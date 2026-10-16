@@ -24,6 +24,7 @@ import Configuracoes from './pages/perfil/Configuracoes.jsx'
 import Ajuda from './pages/perfil/Ajuda.jsx'
 import Termos from './pages/perfil/Termos.jsx'
 import ApagarConta from './pages/perfil/ApagarConta.jsx'
+import AlterarSenha from './pages/perfil/AlterarSenha.jsx'
 import PrimeiroBrique from './pages/perfil/PrimeiroBrique.jsx'
 import Onboarding from './pages/onboarding/Onboarding.jsx'
 
@@ -64,6 +65,7 @@ const router = createBrowserRouter([
           { path: '/perfil/ajuda', element: <Ajuda /> },
           { path: '/perfil/termos', element: <Termos /> },
           { path: '/perfil/apagar-conta', element: <ApagarConta /> },
+          { path: '/perfil/alterar-senha', element: <AlterarSenha /> },
           { path: '/perfil/primeiro-brique', element: <PrimeiroBrique /> },
         ],
       },

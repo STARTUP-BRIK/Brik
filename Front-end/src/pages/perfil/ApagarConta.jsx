@@ -48,7 +48,11 @@ function ApagarConta() {
   }
 
   return (
-    <SubPagina titulo="Apagar conta" descricao="Essa ação é permanente e não pode ser desfeita.">
+    <SubPagina
+      titulo="Apagar conta"
+      descricao="Essa ação é permanente e não pode ser desfeita."
+      voltarPara="/perfil/privacidade"
+    >
       <section className="rounded-2xl bg-surface-card px-4 py-4 ring-1 ring-loss/40">
         <h2 className="text-sm font-bold text-ink">O que será apagado</h2>
         <ul className="mt-2 flex flex-col gap-1.5 text-sm text-ink/70">
