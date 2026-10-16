@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import BrandHeader from '../components/BrandHeader.jsx'
+import CalculoDoProduto from '../components/CalculoDoProduto.jsx'
 import { PrecisaLogin } from '../components/PrecisaLogin.jsx'
 import { ArrowLeftIcon, CameraIcon } from '../components/icons.jsx'
 import { STATUS_PADRAO, STATUS_SELETOR } from '../data/produtosData.js'
+import { resultado } from '../lib/calc.js'
 import { buscarProduto, FORM_VAZIO, paraForm, salvarProduto, urlsDasFotos } from '../lib/estoque.js'
 import { mascaraReais } from '../lib/format.js'
 import { mensagemErro, useUsuarioId } from '../stores/useAuthStore.js'
@@ -12,7 +14,8 @@ import { mensagemErro, useUsuarioId } from '../stores/useAuthStore.js'
 // "Adicionar novo produto") e edição (/adicionar/editar/:id, pelo menu do card
 // em Meus Produtos). Grava em public.estoque e as fotos no Cloudflare R2.
 // Tela cheia, sem navbar: é uma tarefa com começo e fim. No desktop as fotos
-// ficam à esquerda e os campos à direita.
+// ficam à esquerda e os campos à direita. Custo e valor de venda não são
+// digitados: vêm de um cálculo, salvo ou novo (acordeão CalculoDoProduto).
 
 const CATEGORIAS = [
   { value: 'iphone', label: 'Celular' },
@@ -64,6 +67,10 @@ function Selecao({ label, value, onChange, options }) {
     </label>
   )
 }
+
+// O formulário guarda custo e venda com a máscara ("1.234,56"); a calculadora
+// trabalha em reais inteiros.
+const mascaraDeInteiro = (reais) => mascaraReais(String(reais * 100))
 
 // O quadrado de adicionar fica sozinho, grande e centralizado. As fotos
 // escolhidas aparecem embaixo, três por linha, também em 1:1 e recortadas no
@@ -170,6 +177,12 @@ function Formulario({ id, inicial }) {
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
 
+  // Custo do produto = soma dos custos do cálculo (compra, reparos, transporte, outros).
+  function usarCalculo(values) {
+    const r = resultado(values)
+    setForm((atual) => ({ ...atual, custo: mascaraDeInteiro(r.custo), venda: mascaraDeInteiro(r.venda) }))
+  }
+
   // As URLs de pré-visualização das fotos novas precisam ser devolvidas ao
   // navegador na saída.
   const fotosRef = useRef(fotos)
@@ -265,9 +278,8 @@ function Formulario({ id, inicial }) {
             }))}
             {...campo('quantidade')}
           />
-          <Campo label="Custo (R$):" inputMode="numeric" {...campo('custo', mascaraReais)} />
+          <CalculoDoProduto custo={form.custo} venda={form.venda} onUsar={usarCalculo} />
           <Selecao label="Status" options={opcoesStatus} {...campo('status')} />
-          <Campo label="Valor de venda (R$):" inputMode="numeric" {...campo('venda', mascaraReais)} />
 
           <label className="block">
             <span className="sr-only">Descrição</span>

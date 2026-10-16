@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import BrandHeader from '../components/BrandHeader.jsx'
+import CalculoSalvo from '../components/CalculoSalvo.jsx'
 import { PrecisaLogin } from '../components/PrecisaLogin.jsx'
-import { CalculatorIcon, ChevronRightIcon, TrashIcon } from '../components/icons.jsx'
-import { resultado } from '../lib/calc.js'
-import { apagarCalculo, listarCalculos, paraValores } from '../lib/calculos.js'
-import { formatBRL, formatDecimal } from '../lib/format.js'
+import { CalculatorIcon, ChevronRightIcon } from '../components/icons.jsx'
+import { apagarCalculo, listarCalculos } from '../lib/calculos.js'
 import { useUsuarioId } from '../stores/useAuthStore.js'
 
 // Porta de entrada da calculadora, aberta pelo botão flutuante do Dashboard.
@@ -13,46 +12,8 @@ import { useUsuarioId } from '../stores/useAuthStore.js'
 // de navegação, com navbar; quem faz a conta é /calculadora/nova. Embaixo, os
 // cálculos salvos (public.calculos): tocar reabre na calculadora.
 
-const dataCurta = (iso) => new Date(iso).toLocaleDateString('pt-BR')
-
-function CalculoSalvo({ calculo, onApagar }) {
-  const navigate = useNavigate()
-  const r = resultado(paraValores(calculo))
-  const tom = r.lucro > 0 ? 'text-profit' : r.lucro < 0 ? 'text-loss' : 'text-ink'
-
-  return (
-    <li className="flex items-center gap-2 rounded-2xl bg-surface-card p-1.5 pr-2 ring-1 ring-line">
-      <button
-        type="button"
-        onClick={() => navigate('/calculadora/nova', { state: { calculo }, viewTransition: true })}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-surface-raise"
-      >
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-bold text-ink">{calculo.nome}</span>
-          <span className="block text-[11px] text-mute">
-            {dataCurta(calculo.created_at)} · custo {formatBRL(r.custo)} · venda {formatBRL(r.venda)}
-          </span>
-        </span>
-        <span className="shrink-0 text-right">
-          <span className={`block text-sm font-bold tabular-nums ${tom}`}>{formatBRL(r.lucro)}</span>
-          <span className="block text-[11px] tabular-nums text-mute">
-            {r.margem == null ? '—' : `${formatDecimal(r.margem)}%`}
-          </span>
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={() => onApagar(calculo)}
-        aria-label={`Excluir o cálculo ${calculo.nome}`}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-mute transition-colors hover:bg-loss/10 hover:text-loss"
-      >
-        <TrashIcon className="h-4 w-4" />
-      </button>
-    </li>
-  )
-}
-
 function CalculadoraHome() {
+  const navigate = useNavigate()
   const userId = useUsuarioId()
   // null enquanto carrega.
   const [calculos, setCalculos] = useState(null)
@@ -146,7 +107,12 @@ function CalculadoraHome() {
           ) : (
             <ul className="mt-3 flex flex-col gap-2">
               {calculos.map((calculo) => (
-                <CalculoSalvo key={calculo.id} calculo={calculo} onApagar={apagar} />
+                <CalculoSalvo
+                  key={calculo.id}
+                  calculo={calculo}
+                  onAbrir={(c) => navigate('/calculadora/nova', { state: { calculo: c }, viewTransition: true })}
+                  onApagar={apagar}
+                />
               ))}
             </ul>
           )}
