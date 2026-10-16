@@ -877,3 +877,20 @@ html.ob-travado {
     opacity: 0;
   }
 }
+
+/* Menu do "+" da navbar (Navbar.jsx): sobe um pouco ao abrir. */
+.menu-adicionar {
+  animation: menu-adicionar-entra 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  transform-origin: bottom center;
+}
+@keyframes menu-adicionar-entra {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-adicionar {
+    animation: none;
+  }
+}
