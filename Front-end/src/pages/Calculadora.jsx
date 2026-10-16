@@ -15,6 +15,9 @@ import { formatBRL, formatDecimal, formatInt } from '../lib/format.js'
 // Rótulo pequeno em caixa alta, na Rubik (e não em mono, para não parecer genérico).
 const LABEL = 'text-[10px] font-medium uppercase tracking-[0.14em]'
 
+const VOLTAR =
+  '-ml-1 flex h-9 w-9 items-center justify-center rounded-xl text-strong transition-colors hover:bg-surface-raise'
+
 const KEYS = [
   { label: '7', key: '7' },
   { label: '8', key: '8' },
@@ -54,17 +57,24 @@ function Equilibrio({ lucro, margem }) {
   return <span className="text-mute">No ponto de equilíbrio</span>
 }
 
-function Calculadora() {
+// Pela rota /calculadora/nova, o fim da conta é salvá-la com um nome. Aberta no
+// formulário do estoque (AdicionarProduto) com onUsar, o fim é levar os valores
+// para o produto: o botão do último campo vira "Usar no produto" e a seta do
+// header chama onVoltar. `inicial` são os valores de partida nesse caso.
+function Calculadora({ inicial, onVoltar, onUsar }) {
   const navigate = useNavigate()
   // Aberta a partir de um cálculo salvo (lista da CalculadoraHome), começa com
   // os valores e o nome dele; salvar de novo cria outro cálculo.
   const { state } = useLocation()
-  const [values, setValues] = useState(() => (state?.calculo ? paraValores(state.calculo) : EMPTY))
+  const [values, setValues] = useState(
+    () => inicial ?? (state?.calculo ? paraValores(state.calculo) : EMPTY),
+  )
   const [active, setActive] = useState(0)
   const r = resultado(values)
   const field = FIELDS[active].key
   // No último campo (preço de venda) o botão verde deixa de avançar e passa a
-  // oferecer o próximo passo natural: dar um nome à conta e guardá-la.
+  // oferecer o próximo passo natural: dar um nome à conta e guardá-la (ou, no
+  // estoque, usá-la no produto).
   const isLast = active === FIELDS.length - 1
 
   // Folha "nome do brique", aberta pelo botão verde no último campo.
@@ -74,8 +84,9 @@ function Calculadora() {
   const [erroSalvar, setErroSalvar] = useState('')
 
   function avancar() {
-    if (active === FIELDS.length - 1) setNaming(true)
-    else setActive((i) => i + 1)
+    if (active < FIELDS.length - 1) setActive((i) => i + 1)
+    else if (onUsar) onUsar(values)
+    else setNaming(true)
   }
 
   function tap(key) {
@@ -139,26 +150,28 @@ function Calculadora() {
       if (!key) return
       event.preventDefault()
       if (key === 'next') {
-        if (active === FIELDS.length - 1) setNaming(true)
-        else setActive((i) => i + 1)
+        if (active < FIELDS.length - 1) setActive((i) => i + 1)
+        else if (onUsar) onUsar(values)
+        else setNaming(true)
       } else setValues((v) => ({ ...v, [FIELDS[active].key]: press(v[FIELDS[active].key], key) }))
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [active, naming])
+  }, [active, naming, onUsar, values])
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-surface pb-6 text-strong shadow-xl lg:max-w-5xl lg:pb-12 lg:shadow-none">
       {/* No desktop o header não gruda: quem fica no topo é a TopBar. */}
       <header className="sticky top-0 z-40 flex items-center gap-2 bg-surface px-4 py-3 lg:static lg:px-8 lg:pb-2 lg:pt-10">
-        <Link
-          to="/calculadora"
-          viewTransition
-          aria-label="Voltar"
-          className="-ml-1 flex h-9 w-9 items-center justify-center rounded-xl text-strong transition-colors hover:bg-surface-raise"
-        >
-          <ArrowLeftIcon className="h-5 w-5" />
-        </Link>
+        {onVoltar ? (
+          <button type="button" onClick={onVoltar} aria-label="Voltar" className={VOLTAR}>
+            <ArrowLeftIcon className="h-5 w-5" />
+          </button>
+        ) : (
+          <Link to="/calculadora" viewTransition aria-label="Voltar" className={VOLTAR}>
+            <ArrowLeftIcon className="h-5 w-5" />
+          </Link>
+        )}
         <h1 className="flex-1 text-xl font-bold tracking-tight lg:text-[28px]">Calculadora</h1>
         <button
           type="button"
@@ -263,9 +276,9 @@ function Calculadora() {
                   // Sem o espaçamento entre letras: numa tecla de 1/4 da largura,
                   // "SALVAR" e "CÁLCULO" precisam caber inteiros, um por linha.
                   <span className="whitespace-nowrap tracking-normal">
-                    Salvar
+                    {onUsar ? 'Usar no' : 'Salvar'}
                     <br />
-                    cálculo
+                    {onUsar ? 'produto' : 'cálculo'}
                   </span>
                 ) : (
                   label
