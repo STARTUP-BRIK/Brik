@@ -1,13 +1,33 @@
 import { useState } from 'react'
 import BrandHeader from '../components/BrandHeader.jsx'
 import { LightbulbIcon, ShieldCheckIcon, WarningIcon } from '../components/icons.jsx'
+import { consultarImei } from '../lib/imei.js'
 
-// Verificar IMEI: só no desktop (o link fica na TopBar; no celular a tela só
-// avisa isso). EM CONSTRUÇÃO: a consulta de verdade (bloqueio, roubo, restrição)
-// ainda não existe. Por enquanto a tela só confere se o número tem o formato de
-// um IMEI — 15 dígitos com o último batendo pelo algoritmo de Luhn.
+// Verificar IMEI: no desktop o link fica na TopBar; no celular, no menu do "+"
+// da navbar. Antes de consultar, confere o formato (15 dígitos, o último pelo
+// algoritmo de Luhn); a consulta vai ao imei.info pela Edge Function
+// consultar-imei (lib/imei.js): Buscar iPhone (iCloud) e lista de bloqueio.
 
 const DIGITOS = 15
+
+// Os dois cards do resultado. `bom`: o valor que libera a compra (ativo/
+// bloqueado = false); null = o imei.info não respondeu claro.
+const CARDS = [
+  {
+    chave: 'fmi',
+    campo: 'ativo',
+    titulo: 'Buscar iPhone (iCloud)',
+    sim: { selo: 'Ativado', texto: 'Preso a uma conta Apple. Só compre depois que o vendedor desligar na sua frente.' },
+    nao: { selo: 'Desligado', texto: 'Não está preso a nenhuma conta Apple.' },
+  },
+  {
+    chave: 'blacklist',
+    campo: 'bloqueado',
+    titulo: 'Lista de bloqueio',
+    sim: { selo: 'Bloqueado', texto: 'O IMEI aparece como perdido, roubado ou bloqueado. Não compre.' },
+    nao: { selo: 'Limpo', texto: 'Nenhum registro de bloqueio encontrado.' },
+  },
+]
 
 // Luhn sobre os 15 dígitos: da direita para a esquerda, dobra um sim, um não.
 function imeiValido(imei) {
@@ -34,70 +54,79 @@ function VerificarImei() {
   const [imei, setImei] = useState('')
   const completo = imei.length === DIGITOS
   const valido = completo && imeiValido(imei)
+  const [consultando, setConsultando] = useState(false)
+  const [resultado, setResultado] = useState(null)
+  const [erro, setErro] = useState('')
+
+  async function consultar(event) {
+    event.preventDefault()
+    if (!valido || consultando) return
+    setConsultando(true)
+    setErro('')
+    setResultado(null)
+    try {
+      setResultado(await consultarImei(imei))
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setConsultando(false)
+    }
+  }
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-surface pb-28 shadow-xl lg:max-w-7xl lg:pb-16 lg:shadow-none">
       <BrandHeader />
 
-      {/* Celular: a tela não funciona aqui, só avisa. */}
-      <main className="flex flex-col items-center gap-2 px-8 py-16 text-center lg:hidden">
-        <ShieldCheckIcon aria-hidden="true" className="h-12 w-12 text-line" />
-        <h1 className="mt-1 text-xl font-bold text-ink">Verificar IMEI</h1>
-        <p className="font-medium text-ink">Só funciona no computador</p>
-        <p className="text-sm text-ink/60">Abra o Brik no computador para verificar o IMEI de um aparelho.</p>
-      </main>
-
-      {/* Desktop: na largura da TopBar (max-w-7xl), com a consulta à esquerda e as
-          dicas de onde achar o IMEI numa coluna à direita. */}
-      <main className="hidden px-8 pt-12 lg:block">
-        <div className="flex flex-wrap items-center gap-4">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brik text-paper">
-            <ShieldCheckIcon aria-hidden="true" className="h-8 w-8" />
+      {/* Celular: uma coluna só (a navbar chega aqui pelo "+"). Desktop: na
+          largura da TopBar (max-w-7xl), com a consulta à esquerda e as dicas de
+          onde achar o IMEI numa coluna à direita. */}
+      <main className="px-4 pt-6 lg:px-8 lg:pt-12">
+        <div className="flex items-center gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brik text-paper lg:h-14 lg:w-14">
+            <ShieldCheckIcon aria-hidden="true" className="h-7 w-7 lg:h-8 lg:w-8" />
           </span>
           <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-[34px] font-bold leading-tight tracking-tight text-ink">Verificar IMEI</h1>
-              <span className="rounded-full bg-surface-raise px-3 py-1 text-xs font-medium text-ink/60">
-                Só funciona no computador
-              </span>
-            </div>
-            <p className="text-base text-ink/60">
+            <h1 className="text-2xl font-bold leading-tight tracking-tight text-ink lg:text-[34px]">Verificar IMEI</h1>
+            <p className="text-sm text-ink/60 lg:text-base">
               Antes de comprar um celular usado, confira o IMEI para não levar um aparelho bloqueado.
             </p>
           </div>
         </div>
 
-        <div className="mt-8 flex gap-3 rounded-2xl bg-level-boa px-5 py-4 text-level-boa-ink" role="note">
+        <div className="mt-6 flex gap-3 rounded-2xl bg-level-boa px-4 py-4 lg:mt-8 lg:px-5 text-level-boa-ink" role="note">
           <WarningIcon aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
-          <p className="text-[15px]">
-            <strong>Esta tela ainda está sendo feita.</strong> Por enquanto ela só confere se o número tem
-            o formato de um IMEI válido. A consulta de bloqueio, roubo ou restrição ainda não funciona.
+          <p className="text-sm lg:text-[15px]">
+            <strong>A consulta ajuda, mas não é garantia.</strong> Nem todo aparelho roubado está registrado
+            nas listas de bloqueio. Confira também a nota fiscal e teste o aparelho antes de pagar.
           </p>
         </div>
 
-        <div className="mt-6 grid grid-cols-[minmax(0,1fr)_22rem] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_26rem]">
-          <form onSubmit={(event) => event.preventDefault()} className="rounded-3xl bg-surface-card p-8 ring-1 ring-line">
+        <div className="mt-6 grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-6 xl:grid-cols-[minmax(0,1fr)_26rem]">
+          <form onSubmit={consultar} className="rounded-3xl bg-surface-card p-5 ring-1 ring-line lg:p-8">
             <label htmlFor="imei" className="text-base font-bold text-ink">
               IMEI do aparelho
             </label>
-            <div className="mt-3 flex gap-4">
+            <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:gap-4">
               <input
                 id="imei"
                 inputMode="numeric"
                 autoComplete="off"
                 placeholder="15 dígitos"
                 value={imei}
-                onChange={(event) => setImei(event.target.value.replace(/\D/g, '').slice(0, DIGITOS))}
+                onChange={(event) => {
+                  setImei(event.target.value.replace(/\D/g, '').slice(0, DIGITOS))
+                  setResultado(null)
+                  setErro('')
+                }}
                 aria-describedby="imei-status"
-                className="min-w-0 flex-1 rounded-2xl border border-line bg-surface-card px-5 py-4 font-mono text-2xl tracking-[0.12em] text-ink outline-none placeholder:font-sans placeholder:text-lg placeholder:tracking-normal placeholder:text-ink/35 focus:border-brik"
+                className="min-w-0 flex-1 rounded-2xl border border-line bg-surface-card px-4 py-3.5 font-mono text-xl tracking-[0.08em] lg:px-5 lg:py-4 lg:text-2xl lg:tracking-[0.12em] text-ink outline-none placeholder:font-sans placeholder:text-lg placeholder:tracking-normal placeholder:text-ink/35 focus:border-brik"
               />
               <button
                 type="submit"
-                disabled
-                title="Ainda está sendo feito"
-                className="rounded-2xl bg-brik px-10 text-lg font-bold text-paper disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={!valido || consultando}
+                className="rounded-2xl bg-brik px-10 py-3.5 text-lg font-bold lg:py-0 text-paper disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Consultar
+                {consultando ? 'Consultando…' : 'Consultar'}
               </button>
             </div>
 
@@ -115,14 +144,14 @@ function VerificarImei() {
 
             <p id="imei-status" aria-live="polite" className="mt-3 min-h-6 text-[15px]">
               {imei.length === 0 ? (
-                <span className="text-ink/50">Digite o número para conferir o formato.</span>
+                <span className="text-ink/50">Digite o número do aparelho.</span>
               ) : !completo ? (
                 <span className="text-ink/50">
                   {imei.length} de {DIGITOS} dígitos
                 </span>
               ) : valido ? (
                 <span className="font-medium text-profit">
-                  ✓ Formato válido. A consulta de bloqueio ainda está sendo feita.
+                  ✓ Formato válido. Clique em Consultar.
                 </span>
               ) : (
                 <span className="font-medium text-loss">
@@ -131,26 +160,40 @@ function VerificarImei() {
               )}
             </p>
 
-            {/* O que a consulta vai responder quando estiver pronta. */}
-            <div className="mt-8 border-t border-line pt-6">
-              <h2 className="text-sm font-bold text-ink">Resultado da consulta</h2>
-              <ul className="mt-3 grid grid-cols-3 gap-3">
-                {['Roubo ou furto', 'Bloqueio', 'Restrição'].map((item) => (
-                  <li
-                    key={item}
-                    className="flex items-center justify-between gap-2 rounded-2xl border border-dashed border-line px-4 py-4"
-                  >
-                    <span className="text-sm font-medium text-ink/50">{item}</span>
-                    <span className="rounded-full bg-surface-raise px-2.5 py-1 text-[11px] font-medium text-ink/50">
-                      Em breve
-                    </span>
-                  </li>
-                ))}
+            <div className="mt-8 border-t border-line pt-6" aria-live="polite">
+              <h2 className="text-sm font-bold text-ink">
+                Resultado da consulta{resultado?.modelo ? ` · ${resultado.modelo}` : ''}
+              </h2>
+              {erro && <p className="mt-3 text-[15px] font-medium text-loss">{erro}</p>}
+              <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {CARDS.map(({ chave, campo, titulo, sim, nao }) => {
+                  const valor = resultado?.[chave]?.[campo]
+                  const estado = !resultado ? null : valor === true ? sim : valor === false ? nao : undefined
+                  const cor = valor === true ? 'text-loss' : valor === false ? 'text-profit' : 'text-ink/50'
+                  return (
+                    <li
+                      key={chave}
+                      className={`rounded-2xl px-4 py-4 ${resultado ? 'ring-1 ring-line' : 'border border-dashed border-line'}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-sm font-medium ${resultado ? 'text-ink' : 'text-ink/50'}`}>{titulo}</span>
+                        <span className={`rounded-full bg-surface-raise px-2.5 py-1 text-[11px] font-bold ${cor}`}>
+                          {consultando ? '…' : estado ? estado.selo : estado === undefined ? 'Sem resposta' : '—'}
+                        </span>
+                      </div>
+                      {resultado && (
+                        <p className="mt-2 text-sm leading-relaxed text-ink/60">
+                          {estado ? estado.texto : 'Não foi possível confirmar. Tente de novo mais tarde.'}
+                        </p>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           </form>
 
-          <section className="rounded-3xl bg-surface-card p-6 ring-1 ring-line">
+          <section className="rounded-3xl bg-surface-card p-5 ring-1 ring-line lg:p-6">
             <h2 className="flex items-center gap-2 text-base font-bold text-ink">
               <LightbulbIcon aria-hidden="true" className="h-5 w-5 text-brik" />
               Onde encontrar o IMEI

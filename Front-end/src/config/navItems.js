@@ -1,4 +1,4 @@
-import { HomeIcon, ChartIcon, StarIcon, UserIcon, ShieldCheckIcon } from '../components/icons.jsx'
+import { HomeIcon, ChartIcon, StarIcon, UserIcon, ShieldCheckIcon, PhoneIcon } from '../components/icons.jsx'
 
 // Fonte única das telas da navbar (na ordem da barra). Ao criar uma nova tela,
 // adicione aqui e a rota em App.jsx. A navbar divide a lista ao meio: a primeira
@@ -12,9 +12,15 @@ export const NAV_ITEMS = [
   { path: '/perfil', label: 'Meu Perfil', Icon: UserIcon, conta: true },
 ]
 
-// Telas que só existem no desktop: entram na TopBar, depois das abas de
-// NAV_ITEMS, e nunca na navbar do celular.
+// Abas extras do desktop: entram na TopBar, depois das abas de NAV_ITEMS. No
+// celular essas telas ficam no menu do "+" (ADD_MENU).
 export const DESKTOP_ITEMS = [{ path: '/imei', label: 'Verificar IMEI', Icon: ShieldCheckIcon }]
 
-// Botão "+" no centro da navbar, entre as duas metades.
+// Botão "+" no centro da navbar, entre as duas metades. No desktop (TopBar) ele
+// leva direto ao estoque; no celular abre o menu ADD_MENU.
 export const ADD_ITEM = { path: '/adicionar', label: 'Adicionar' }
+
+export const ADD_MENU = [
+  { path: '/adicionar', label: 'Meu estoque', descricao: 'Seus aparelhos, compras e vendas', Icon: PhoneIcon },
+  { path: '/imei', label: 'Verificar IMEI', descricao: 'Confira se o aparelho está bloqueado', Icon: ShieldCheckIcon },
+]

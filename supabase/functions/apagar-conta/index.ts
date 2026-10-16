@@ -3,7 +3,7 @@
 //   1. apaga as fotos da pessoa no R2 (pasta <user_id>/ dos buckets);
 //   2. apaga o usuário em auth.users. As tabelas do public (profiles,
 //      preferencias, estoque, salvos, calculos, configuracoes, interesses_notificacao,
-//      notificacoes_enviadas) têm FK com ON DELETE CASCADE e somem junto.
+//      notificacoes_enviadas, consultas_imei) têm FK com ON DELETE CASCADE e somem junto.
 // Secrets: os mesmos R2_* da função "r2". A chave de serviço o Supabase já injeta.
 //
 // POST JSON { confirmar: true } -> { ok: true }
