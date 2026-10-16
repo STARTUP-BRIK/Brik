@@ -26,8 +26,7 @@ const ITENS = [
   { key: 'configuracoes', label: 'Configurações', Icon: GearIcon, to: '/perfil/configuracoes' },
   { key: 'ajuda', label: 'Ajuda e Suporte', Icon: SupportIcon, to: '/perfil/ajuda' },
   { key: 'termos', label: 'Termos de Uso', Icon: DocIcon, to: '/perfil/termos' },
-  { key: 'sair', label: 'Sair', Icon: LogoutIcon, perigo: true },
-]
+  { key: 'sair', label: 'Sair', Icon: LogoutIcon, perigo: true },]
 
 // Com `to` o item é um link para a sua tela; sem, é um botão (o "Sair").
 function Item({ label, Icon, perigo, to, onClick }) {

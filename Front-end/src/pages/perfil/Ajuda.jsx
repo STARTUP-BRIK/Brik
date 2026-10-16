@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import { ChevronDownIcon } from '../../components/icons.jsx'
-import { EmBreveSelo, Grupo, Linha, SubPagina } from '../../components/SubPagina.jsx'
+import { Grupo, Linha, SubPagina } from '../../components/SubPagina.jsx'
 import { NIVEIS } from '../../config/categorias.js'
+
+const CONTATO_EMAIL = 'startupbrik@gmail.com'
 
 // Ajuda e Suporte. As respostas descrevem o que o app faz hoje: se mudar a regra
 // no worker (limiares dos selos, strikes) ou na calculadora, atualize aqui.
@@ -106,8 +108,20 @@ function Ajuda() {
       </section>
 
       <Grupo titulo="Ainda precisa de ajuda?">
-        <Linha titulo="Fale com a gente" detalhe="Atendimento pelo app.">
-          <EmBreveSelo />
+        <Linha
+          titulo="Fale com a gente"
+          detalhe={
+            <a href={`mailto:${CONTATO_EMAIL}`} className="font-medium text-brik underline">
+              {CONTATO_EMAIL}
+            </a>
+          }
+        >
+          <a
+            href={`mailto:${CONTATO_EMAIL}`}
+            className="shrink-0 rounded-full bg-brik px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
+          >
+            Enviar email
+          </a>
         </Linha>
       </Grupo>
     </SubPagina>

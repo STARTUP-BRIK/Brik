@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { EmBreveSelo, Grupo, Interruptor, Linha, Nota, SubPagina } from '../../components/SubPagina.jsx'
 import { usePreferenciasStore } from '../../stores/usePreferenciasStore.js'
 
@@ -20,13 +21,25 @@ function Privacidade() {
 
       <Grupo titulo="Sua conta">
         <Linha titulo="Alterar senha">
-          <EmBreveSelo />
+          <Link
+            to="/perfil/alterar-senha"
+            viewTransition
+            className="shrink-0 rounded-full bg-brik px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
+          >
+            Alterar
+          </Link>
         </Linha>
         <Linha titulo="Baixar meus dados" detalhe="Uma cópia do seu estoque e dos seus cálculos.">
           <EmBreveSelo />
         </Linha>
         <Linha titulo="Excluir conta" detalhe="Apaga sua conta e tudo o que você guardou no Brik.">
-          <EmBreveSelo />
+          <Link
+            to="/perfil/apagar-conta"
+            viewTransition
+            className="shrink-0 rounded-full bg-loss px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
+          >
+            Excluir
+          </Link>
         </Linha>
       </Grupo>
 
