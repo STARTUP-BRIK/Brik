@@ -15,9 +15,10 @@ import { supabase } from './supabase.js'
 // níveis de oportunidade (10c) ligam ou desligam os e-mails de cada nível.
 export function aplicarRadar() {
   const r = useOnboardingStore.getState()
+  const querDefeito = consertaValido(r).length > 0
   usePreferenciasStore.setState(({ notificacoes }) => ({
     categorias: r.categorias,
-    mostrarDefeito: consertaValido(r).length > 0,
+    mostrarDefeito: querDefeito,
     modelosNotificacao: modelosValidos(r),
     metaMensal: r.meta,
     raio: r.raio,
@@ -25,6 +26,7 @@ export function aplicarRadar() {
     notificacoes: {
       ...notificacoes,
       ...Object.fromEntries(NIVEIS.map(({ value }) => [value, r.niveisAlerta.includes(value)])),
+      defeito: querDefeito,
     },
   }))
 }

@@ -30,9 +30,14 @@ const paraLinha = (estado) => Object.fromEntries(Object.entries(COLUNAS).map(([c
 
 function paraEstado(linha) {
   const estado = Object.fromEntries(Object.entries(COLUNAS).map(([campo, col]) => [campo, linha[col]]))
-  // numeric chega como string; notificações novas ganham o padrão.
+  // numeric chega como string; notificações novas ganham o padrão. Conta de
+  // antes do aviso de defeito: segue o que ela escolheu para o Início.
   estado.precoMaximo = linha.preco_maximo == null ? null : Number(linha.preco_maximo)
-  estado.notificacoes = { ...PREFERENCIAS_PADRAO.notificacoes, ...linha.notificacoes }
+  estado.notificacoes = {
+    ...PREFERENCIAS_PADRAO.notificacoes,
+    defeito: linha.mostrar_defeito ?? true,
+    ...linha.notificacoes,
+  }
   return estado
 }
 
