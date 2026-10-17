@@ -8,6 +8,10 @@ import { supabase } from './supabase.js'
 // Endereço público do bucket de avatares (o mesmo configurado na função).
 export const URL_PUBLICA_AVATARS = 'https://pub-2fc78e4fb117416f900a47b733153785.r2.dev'
 
+// Mídia do próprio site (vídeos das telas), no bucket público "brik-midia".
+// Não passa pela função: é enviada à mão (wrangler r2 object put).
+export const URL_PUBLICA_MIDIA = 'https://pub-e73a63a5b6244e07a5f4d62876a870f2.r2.dev'
+
 async function chamar(body) {
   const { data, error } = await supabase.functions.invoke('r2', { body })
   if (error) {
