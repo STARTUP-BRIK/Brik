@@ -17,7 +17,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 const PRECOS: Record<string, { ciclo: string; valor: number; nome: string }> = {
   'pro:mensal': { ciclo: 'MONTHLY', valor: 37.9, nome: 'Brik Pro (mensal)' },
   'pro:anual': { ciclo: 'YEARLY', valor: 439.9, nome: 'Brik Pro (anual)' },
-  'intermedium:mensal': { ciclo: 'WEEKLY', valor: 5, nome: 'Brik Intermedium (semanal)' },
+  'intermedium:mensal': { ciclo: 'WEEKLY', valor: 23.9, nome: 'Brik Intermedium (semanal)' },
 }
 
 const apiKey = Deno.env.get('ASAAS_API_KEY')
