@@ -20,6 +20,7 @@ import VerificarImei from './pages/VerificarImei.jsx'
 import Privacidade from './pages/perfil/Privacidade.jsx'
 import Notificacoes from './pages/perfil/Notificacoes.jsx'
 import Planos from './pages/Planos.jsx'
+import Assinatura from './pages/perfil/Assinatura.jsx'
 import Configuracoes from './pages/perfil/Configuracoes.jsx'
 import Ajuda from './pages/perfil/Ajuda.jsx'
 import Termos from './pages/perfil/Termos.jsx'
@@ -59,7 +60,9 @@ const router = createBrowserRouter([
           // Meu Perfil acesa) e voltam para o perfil pela seta do título.
           { path: '/perfil/privacidade', element: <Privacidade /> },
           { path: '/perfil/notificacoes', element: <Notificacoes /> },
-          // Escolha de plano (Free, Intermedium, Pro). Entra pelo "Meu plano" do Perfil.
+          // Situação da assinatura e cancelamento ("Meu plano" do Perfil), que
+          // leva à escolha de plano (Free, Intermedium, Pro).
+          { path: '/perfil/assinatura', element: <Assinatura /> },
           { path: '/planos', element: <Planos /> },
           { path: '/perfil/configuracoes', element: <Configuracoes /> },
           { path: '/perfil/ajuda', element: <Ajuda /> },

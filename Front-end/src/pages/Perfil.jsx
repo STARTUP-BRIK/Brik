@@ -20,7 +20,7 @@ import { supabase } from '../lib/supabase.js'
 // "Sair" encerra a sessão.
 
 const ITENS = [
-  { key: 'plano', label: 'Meu plano', Icon: StarIcon, to: '/planos' },
+  { key: 'plano', label: 'Meu plano', Icon: StarIcon, to: '/perfil/assinatura' },
   { key: 'privacidade', label: 'Privacidade', Icon: LockIcon, to: '/perfil/privacidade' },
   { key: 'notificacoes', label: 'Notificações', Icon: BellIcon, to: '/perfil/notificacoes' },
   { key: 'configuracoes', label: 'Configurações', Icon: GearIcon, to: '/perfil/configuracoes' },
