@@ -1,16 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import BrandHeader from '../components/BrandHeader.jsx'
 import { FotoPerfil } from '../components/conta.jsx'
 import { StarIcon } from '../components/icons.jsx'
 import { PLANOS } from '../config/planos.js'
+import { linkDePagamento, minhaAssinatura, temCadastroAsaas } from '../lib/assinatura.js'
 import { fotoDaConta, usePerfil } from '../lib/conta.js'
 import { usePreferenciasStore } from '../stores/usePreferenciasStore.js'
 
 // Escolha de plano: Free, Intermedium (cobrança semanal) e Pro, com a chave
 // mensal/anual. O Pro fica em destaque, no centro. O plano em que a pessoa está
-// leva a foto dela (ou o ícone de usuário) no canto. O pagamento ainda não está
-// ligado: os botões de assinar avisam isso em vez de fingir uma cobrança.
+// leva a foto dela (ou o ícone de usuário) no canto. Assinar leva para a fatura
+// do Asaas (lib/assinatura.js); no onboarding, o pagamento fica para depois.
 //
 // `inicio`: a mesma tela como último passo do onboarding (tela 20). Aí o Free
 // vira "Começar no gratuito", que conclui o onboarding (`inicio.onGratis`), e
@@ -89,7 +90,66 @@ function BotaoGratis({ inicio }) {
   )
 }
 
-function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher, inicio }) {
+// Botão de assinar (fora do onboarding): pede o CPF na 1ª vez (o Asaas exige
+// para criar o cliente) e leva para a fatura do Asaas, onde a pessoa escolhe
+// Pix, cartão ou boleto. O plano muda sozinho quando o pagamento confirma.
+// `reativar`: é o plano atual, mas a assinatura foi cancelada (ainda no período
+// pago); a 1ª cobrança nova só vence no fim desse período (asaas-checkout).
+function Assinar({ plano, anual, definido, reativar }) {
+  const [pedeCpf, setPedeCpf] = useState(false)
+  const [cpf, setCpf] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [erro, setErro] = useState(null)
+
+  async function pagar(event) {
+    event?.preventDefault()
+    setEnviando(true)
+    setErro(null)
+    try {
+      if (!pedeCpf && !(await temCadastroAsaas())) {
+        setPedeCpf(true)
+        return
+      }
+      window.location.href = await linkDePagamento({ plano: plano.value, anual, cpf: pedeCpf ? cpf : undefined })
+    } catch (e) {
+      setErro(e.message)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  const estilo = `h-12 w-full rounded-xl text-sm font-bold transition-[background-color,opacity] disabled:cursor-not-allowed disabled:opacity-45 ${plano.popular ? 'bg-brik text-paper hover:bg-brik-dark' : 'bg-ink text-surface hover:opacity-90'}`
+
+  return (
+    <form onSubmit={pagar} className="flex flex-col gap-2.5">
+      {pedeCpf && (
+        <label className="flex flex-col gap-1 text-xs font-medium text-ink/70">
+          CPF de quem vai pagar
+          <input
+            autoFocus
+            required
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="000.000.000-00"
+            value={cpf}
+            onChange={(e) => setCpf(e.target.value)}
+            className="h-11 rounded-xl border border-line bg-surface px-3 text-sm text-ink outline-none focus:border-brik"
+          />
+        </label>
+      )}
+      <button type="submit" disabled={!definido || enviando} className={estilo}>
+        {!definido ? 'Indisponível' : enviando ? 'Abrindo pagamento…' : pedeCpf ? 'Continuar para o pagamento' : `${reativar ? 'Reativar' : 'Assinar'} o ${plano.nome}`}
+      </button>
+      {erro && (
+        <p role="alert" className="text-center text-xs leading-snug text-loss">
+          {erro}
+        </p>
+      )}
+    </form>
+  )
+}
+
+function Cartao({ plano, anual, indice, atual, cancelada, foto, escolhido, onEscolher, inicio }) {
   const valor = anual ? plano.preco.anual : plano.preco.mensal
   const periodo = anual ? 'ano' : plano.periodo
   const gratis = valor === 0
@@ -142,7 +202,9 @@ function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher, inic
       </ul>
 
       <div className="mt-auto pt-6">
-        {atual ? (
+        {atual && cancelada ? (
+          <Assinar plano={plano} anual={anual} definido={definido} reativar />
+        ) : atual ? (
           <p className="flex h-12 w-full items-center justify-center rounded-xl bg-surface-raise text-sm font-bold text-ink/60">
             Seu plano atual
           </p>
@@ -156,6 +218,8 @@ function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher, inic
           >
             Continuar no Free
           </Link>
+        ) : !inicio ? (
+          <Assinar plano={plano} anual={anual} definido={definido} />
         ) : (
           <button
             type="button"
@@ -167,11 +231,9 @@ function Cartao({ plano, anual, indice, atual, foto, escolhido, onEscolher, inic
             {definido ? `Assinar o ${plano.nome}` : 'Indisponível'}
           </button>
         )}
-        {escolhido && (
+        {escolhido && inicio && (
           <p role="status" className="mt-2.5 text-center text-xs leading-snug text-ink/60">
-            {inicio
-              ? 'O pagamento ainda não está disponível. Comece no gratuito: seu radar fica salvo e você assina quando quiser.'
-              : 'O pagamento ainda não está disponível. Assim que estiver, você assina por aqui.'}
+            Comece no gratuito: seu radar fica salvo e você assina quando quiser, em Planos.
           </p>
         )}
       </div>
@@ -185,6 +247,16 @@ function Planos({ inicio }) {
   const planoAtual = usePreferenciasStore((state) => state.planoAtual)
   const { user, perfil } = usePerfil()
   const foto = fotoDaConta(user, perfil)
+  // Assinatura do plano atual cancelada (ainda no período pago): o cartão dele
+  // oferece reativar em vez de "Seu plano atual".
+  const [cancelada, setCancelada] = useState(false)
+
+  useEffect(() => {
+    if (inicio) return
+    minhaAssinatura()
+      .then((assinatura) => setCancelada(assinatura?.status === 'cancelada' && assinatura.plano === planoAtual))
+      .catch(() => {})
+  }, [inicio, planoAtual])
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-surface pb-28 shadow-xl lg:max-w-none lg:pb-16 lg:shadow-none">
@@ -219,6 +291,7 @@ function Planos({ inicio }) {
               anual={anual}
               indice={indice}
               atual={!inicio && plano.value === planoAtual}
+              cancelada={cancelada}
               foto={foto}
               escolhido={escolhido === plano.value}
               onEscolher={setEscolhido}
@@ -227,7 +300,10 @@ function Planos({ inicio }) {
           ))}
         </div>
 
-        <p className="mt-8 text-center text-xs text-ink/50">Preços em reais. Dá para trocar ou cancelar o plano quando quiser.</p>
+        <p className="mt-8 text-center text-xs text-ink/50">
+          Preços em reais. Troque ou cancele quando quiser em Perfil → Meu plano: quem cancela segue no plano até o fim do
+          período já pago, sem novas cobranças.
+        </p>
       </main>
     </div>
   )
