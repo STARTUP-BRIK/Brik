@@ -3,7 +3,9 @@
 // Quem recebe: quem acompanha o modelo do anúncio (public.interesses_notificacao,
 // ids de Front-end/src/config/modelos.js) e ligou o nível dele na tela de
 // Notificações (public.configuracoes.notificacoes: chaves boa, otima,
-// extraordinaria). Só nos planos pagos (Pro e Intermedium): o Free não recebe
+// extraordinaria). Anúncio com defeito informado só vai para quem deixou a
+// chave defeito ligada (conta sem a chave segue mostrar_defeito, como o site).
+// Só nos planos pagos (Pro e Intermedium): o Free não recebe
 // aviso de oportunidade. Cada pessoa recebe no máximo um e-mail por anúncio
 // (public.notificacoes_enviadas).
 //
@@ -162,9 +164,18 @@ async function notificarAnuncios(supabase, urls) {
     const usuarios = [...pagos];
     const niveisDe = new Map();
     for (const lote of emLotes(usuarios)) {
-        const { data, error } = await supabase.from('configuracoes').select('user_id, notificacoes').in('user_id', lote);
+        const { data, error } = await supabase
+            .from('configuracoes')
+            .select('user_id, notificacoes, mostrar_defeito')
+            .in('user_id', lote);
         if (error) throw new Error(`Erro ao ler configuracoes: ${error.message}`);
-        data.forEach((linha) => niveisDe.set(linha.user_id, { ...NIVEIS_PADRAO, ...(linha.notificacoes ?? {}) }));
+        data.forEach((linha) =>
+            niveisDe.set(linha.user_id, {
+                ...NIVEIS_PADRAO,
+                defeito: linha.mostrar_defeito ?? true,
+                ...(linha.notificacoes ?? {}),
+            }),
+        );
     }
 
     const jaEnviados = new Set();
@@ -179,6 +190,7 @@ async function notificarAnuncios(supabase, urls) {
         const niveis = niveisDe.get(userId) ?? NIVEIS_PADRAO;
         for (const anuncio of porModelo.get(modelo)) {
             if (niveis[anuncio.opportunity_level] !== true) continue;
+            if (anuncio.defeito && niveis.defeito === false) continue;
             if (!pagos.has(userId)) continue;
             if (jaEnviados.has(`${userId}|${anuncio.url}`)) continue;
             envios.push({ userId, anuncio });
