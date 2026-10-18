@@ -143,9 +143,14 @@ const ACIMA_MAX_PLAUSIVEL = 2.5;     // > 2,5x a mediana do segmento → descart
 // a verificação (node worker.js --verificar-strikes, action própria) abre a
 // página dele no OLX e confirma que saiu do ar: a raspagem perde anúncio ativo
 // por re-ranqueamento/hiccup, não só por venda.
-// Máximo de verificações no OLX por execução (~7s cada); o excedente fica com o
-// strike e é verificado na execução seguinte, mais antigos primeiro.
-const OLX_PROBE_MAX = 250;
+// Máximo de verificações no OLX por execução (~3s cada no Actions: 250 levaram
+// 12 min em 15/10); o excedente fica com o strike e é verificado na execução
+// seguinte, mais antigos primeiro. Era 250 e a fila crescia (~930 em 16/10).
+const OLX_PROBE_MAX = 800;
+// A verificação roda em lotes, cada um num processo Python (Chrome) próprio e
+// gravado assim que termina: um lote de ~10 min fica longe do PYTHON_TIMEOUT_MS
+// (30 min), e um lote que falha não perde o que os anteriores já confirmaram.
+const OLX_PROBE_LOTE = 200;
 
 // Todo anúncio do feed (opportunity_level diferente de 'nenhuma') tem a descrição
 // lida no OLX e julgada pela IA; com defeito (ou algo que não é o produto), é
@@ -1169,23 +1174,30 @@ async function verificarStrikes({ headless = false } = {}) {
         (adiados > 0 ? ` (${adiados} ficam pra próxima verificação)` : '') + '...'
     );
 
-    const verdicts = await probeManyViaBrowser(toProbe, { headless });
     const toDelete = [];
-    const alive = [];
+    let aliveCount = 0;
     let inconclusiveCount = 0;
-    for (const row of toProbe) {
-        const verdict = verdicts.get(row.url);
-        if (verdict === 'gone') toDelete.push(row);
-        else if (verdict === 'alive') alive.push({ url: row.url, strikes: 0 });
-        else inconclusiveCount++;
+    for (let i = 0; i < toProbe.length; i += OLX_PROBE_LOTE) {
+        const lote = toProbe.slice(i, i + OLX_PROBE_LOTE);
+        console.log(`\nLote ${i / OLX_PROBE_LOTE + 1}/${Math.ceil(toProbe.length / OLX_PROBE_LOTE)} (${lote.length} anúncios)...`);
+        const verdicts = await probeManyViaBrowser(lote, { headless });
+        const goneLote = [];
+        const alive = [];
+        for (const row of lote) {
+            const verdict = verdicts.get(row.url);
+            if (verdict === 'gone') goneLote.push(row);
+            else if (verdict === 'alive') alive.push({ url: row.url, strikes: 0 });
+            else inconclusiveCount++;
+        }
+        await updateStrikes(alive);
+        await deleteActiveByUrl(goneLote.map((row) => row.url));
+        toDelete.push(...goneLote);
+        aliveCount += alive.length;
     }
-
-    await updateStrikes(alive);
-    await deleteActiveByUrl(toDelete.map((row) => row.url));
 
     console.log(
         `\nVerificação: ${toDelete.length} removidos (confirmados fora do ar) | ` +
-        `${alive.length} ainda no ar (strike zerado) | ${inconclusiveCount} inconclusivos (ficam na fila).`
+        `${aliveCount} ainda no ar (strike zerado) | ${inconclusiveCount} inconclusivos (ficam na fila).`
     );
     if (toDelete.length > 0) {
         console.log(`Removidos (${toDelete.length}), primeiros 20:`);
