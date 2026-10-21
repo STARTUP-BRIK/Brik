@@ -1,6 +1,6 @@
 name: Raspagem (base)
 
-# Reutilizado por scrape.yml (completa) e scrape-recentes.yml (5 primeiras páginas).
+# Reutilizado por scrape.yml (completa) e scrape-recentes.yml (novos: da página 1 até o 1º anúncio já no banco).
 on:
   workflow_call:
     inputs:
@@ -16,6 +16,10 @@ on:
         default: ''
       primeiras:
         description: 'paginas conta a partir da 1ª página (mais recentes) em vez da última'
+        type: boolean
+        default: false
+      ate_conhecido:
+        description: 'Da 1ª página em diante, parando na 1ª com anúncio já no banco (paginas vira o teto)'
         type: boolean
         default: false
       dry_run:
@@ -59,7 +63,9 @@ jobs:
           if [ "$COMPLETO" != "true" ]; then
             read -ra args <<< "$BUSCAS"
             if [ -n "$PAGINAS" ]; then
-              if [ "$PRIMEIRAS" = "true" ]; then args+=(--primeiras "$PAGINAS"); else args+=(--paginas "$PAGINAS"); fi
+              if [ "$ATE_CONHECIDO" = "true" ]; then args+=(--ate-conhecido "$PAGINAS")
+              elif [ "$PRIMEIRAS" = "true" ]; then args+=(--primeiras "$PAGINAS")
+              else args+=(--paginas "$PAGINAS"); fi
             fi
           fi
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
@@ -70,6 +76,7 @@ jobs:
           BUSCAS: ${{ inputs.buscas }}
           PAGINAS: ${{ inputs.paginas }}
           PRIMEIRAS: ${{ inputs.primeiras }}
+          ATE_CONHECIDO: ${{ inputs.ate_conhecido }}
           DRY_RUN: ${{ inputs.dry_run }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

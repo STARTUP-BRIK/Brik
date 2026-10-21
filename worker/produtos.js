@@ -46,26 +46,29 @@ function withScrapeCondition(items, condition) {
 const produtoKey = (p) => `${p.busca}|${p.categoria}|${p.condicao}|${p.estado}`;
 const rotulo = (p) => `${decodeURIComponent(p.busca)} (${p.categoria}, ${p.condicao}, ${p.estado.toUpperCase()})`;
 
-// node worker.js [busca ...] [--paginas N | --primeiras N] [--dry-run] [--headless]
+// node worker.js [busca ...] [--paginas N | --primeiras N | --ate-conhecido N] [--dry-run] [--headless]
 // node worker.js --verificar-strikes [--headless]
 //   --paginas N   -> as N ÚLTIMAS páginas da busca (o app.py raspa da última pra primeira)
 //   --primeiras N -> as N PRIMEIRAS páginas (anúncios mais recentes)
+//   --ate-conhecido N -> da 1ª página em diante, até a 1ª página com um anúncio já
+//                        no banco (no máximo N páginas)
 //   --verificar-strikes -> não raspa: confere no OLX os anúncios com strike
 function parseArgs(argv) {
-    const opts = { buscas: [], paginas: null, primeiras: false, dryRun: false, headless: false, verificarStrikes: false };
+    const opts = { buscas: [], paginas: null, primeiras: false, ateConhecido: false, dryRun: false, headless: false, verificarStrikes: false };
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
         if (arg === '--dry-run') opts.dryRun = true;
         else if (arg === '--headless') opts.headless = true;
         else if (arg === '--verificar-strikes') opts.verificarStrikes = true;
-        else if (/^--(paginas|primeiras)(=|$)/.test(arg)) {
+        else if (/^--(paginas|primeiras|ate-conhecido)(=|$)/.test(arg)) {
             const flag = arg.split('=')[0];
             const valor = arg.includes('=') ? arg.split('=')[1] : argv[++i];
             const n = Number(valor);
             if (!Number.isInteger(n) || n < 1) throw new Error(`${flag} precisa de um inteiro >= 1 (recebido: ${valor})`);
-            if (opts.paginas !== null) throw new Error('Use só um entre --paginas e --primeiras.');
+            if (opts.paginas !== null) throw new Error('Use só um entre --paginas, --primeiras e --ate-conhecido.');
             opts.paginas = n;
             opts.primeiras = flag === '--primeiras';
+            opts.ateConhecido = flag === '--ate-conhecido';
         } else if (arg.startsWith('--')) {
             throw new Error(`Argumento desconhecido: ${arg}`);
         } else {
@@ -73,13 +76,13 @@ function parseArgs(argv) {
         }
     }
     if (opts.verificarStrikes && (opts.buscas.length > 0 || opts.paginas !== null || opts.dryRun)) {
-        throw new Error('--verificar-strikes não raspa: não combina com produtos, --paginas/--primeiras nem --dry-run.');
+        throw new Error('--verificar-strikes não raspa: não combina com produtos, --paginas/--primeiras/--ate-conhecido nem --dry-run.');
     }
     return opts;
 }
 
 // Aplica o filtro por busca e o limite de páginas. `parcial` = as páginas foram
-// limitadas (--paginas/--primeiras), então NENHUMA raspagem viu tudo e não pode haver strike.
+// limitadas (--paginas/--primeiras/--ate-conhecido), então NENHUMA raspagem viu tudo e não pode haver strike.
 // Rodar só um subconjunto de produtos não é "parcial": o rastreador de strikes
 // libera cada categoria cujas buscas foram todas raspadas e pula as demais.
 function selectProdutos(produtos, opts) {
@@ -93,12 +96,13 @@ function selectProdutos(produtos, opts) {
         selecionados = produtos.filter((p) => opts.buscas.includes(p.busca));
     }
     if (opts.paginas !== null) {
-        selecionados = selecionados.map((p) => ({ ...p, paginas: opts.paginas, primeiras: opts.primeiras }));
+        selecionados = selecionados.map((p) => ({ ...p, paginas: opts.paginas, primeiras: opts.primeiras, ateConhecido: opts.ateConhecido }));
     }
     return { selecionados, parcial: opts.paginas !== null };
 }
 
-function scraperArgs(produto, { headless = false } = {}) {
+// conhecidosPath: JSON com os IDs já no banco, exigido quando produto.ateConhecido.
+function scraperArgs(produto, { headless = false, conhecidosPath = null } = {}) {
     const args = [
         '--busca', produto.busca,
         '--estado', produto.estado,
@@ -107,6 +111,7 @@ function scraperArgs(produto, { headless = false } = {}) {
         '--paginas', String(produto.paginas),
     ];
     if (produto.primeiras) args.push('--primeiras');
+    if (produto.ateConhecido) args.push('--ate-conhecido', conhecidosPath);
     if (headless) args.push('--headless');
     return args;
 }
