@@ -76,7 +76,8 @@ const LLM_PROVIDERS = {
         url: 'https://api.anthropic.com/v1/messages',
         apiKeyEnv: 'ANTHROPIC_API_KEY',
         formato: 'anthropic',
-        modelos: ['claude-haiku-4-5-20251001'],
+        // Haiku 5.5: ~10x mais barato que o 4.5 (US$ 0,10 / 0,50 por milhão de tokens).
+        modelos: ['claude-haiku-5-5'],
         pago: true,
     },
 };
@@ -543,7 +544,10 @@ async function chamarModelo({ provider, model, apiKey }, systemPrompt, userConte
     const body = anthropic
         ? {
               model,
-              max_tokens: 4096,
+              // O Haiku 5.5 sempre pensa, e o pensamento conta no max_tokens: esforço
+              // baixo (classificação não precisa de raciocínio longo) e folga no limite.
+              max_tokens: 16000,
+              output_config: { effort: 'low' },
               system: systemPrompt,
               messages: [{ role: 'user', content: userContent }],
           }
@@ -567,6 +571,8 @@ async function chamarModelo({ provider, model, apiKey }, systemPrompt, userConte
     if (response.ok) {
         const data = await response.json();
         if (anthropic) {
+            if (data.stop_reason === 'max_tokens') return { erro: 'resposta cortada no limite de tokens' };
+            if (data.stop_reason === 'refusal') return { erro: 'a IA recusou o pedido' };
             return { texto: data.content.map((block) => (block.type === 'text' ? block.text : '')).join('') };
         }
         const choice = data.choices?.[0];
