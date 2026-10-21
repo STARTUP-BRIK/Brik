@@ -276,9 +276,49 @@ async function runPythonScript(scriptArgs, { tag = 'scraper' } = {}) {
     return payload;
 }
 
-// Raspagem de UM produto (busca no OLX).
+// Raspagem de UM produto (busca no OLX). No modo --ate-conhecido, o app.py
+// recebe num arquivo os IDs que já estão no banco pra saber onde parar.
 async function runPythonScraper(produto, { headless = false } = {}) {
-    return runPythonScript(scraperArgs(produto, { headless }), { tag: `scraper:${produto.busca}` });
+    let conhecidosPath = null;
+    if (produto.ateConhecido) {
+        const ids = await idsConhecidos(CATEGORIA_OLX_PARA_INTERNA[produto.categoria]);
+        conhecidosPath = path.join(os.tmpdir(), `brik-conhecidos-${process.pid}-${produto.busca}.json`);
+        fs.writeFileSync(conhecidosPath, JSON.stringify(ids));
+    }
+    try {
+        return await runPythonScript(scraperArgs(produto, { headless, conhecidosPath }), { tag: `scraper:${produto.busca}` });
+    } finally {
+        if (conhecidosPath) fs.rmSync(conhecidosPath, { force: true });
+    }
+}
+
+// IDs de anúncio que já estão no banco, por categoria interna. Vale o cache da IA
+// (classificacoes_ia), não anuncios_ativos: ele guarda também os descartados (não
+// é o produto, preço absurdo), que não estão no feed mas já foram vistos. Uma
+// consulta por categoria por execução, dividida entre as buscas dela.
+const conhecidosPorCategoria = new Map();
+function idsConhecidos(category) {
+    if (!conhecidosPorCategoria.has(category)) {
+        conhecidosPorCategoria.set(category, fetchKnownIds(category));
+    }
+    return conhecidosPorCategoria.get(category);
+}
+
+async function fetchKnownIds(category, pageSize = 1000) {
+    const ids = [];
+    for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+            .from('classificacoes_ia')
+            .select('url')
+            .eq('category', category)
+            .order('url')
+            .range(from, from + pageSize - 1);
+
+        if (error) throw new Error(`Erro ao consultar classificacoes_ia p/ anúncios conhecidos: ${error.message}`);
+        ids.push(...data.map((row) => extractAdId(row.url)).filter(Boolean));
+        if (data.length < pageSize) break;
+    }
+    return ids;
 }
 
 // O campo Imagem vem do atributo srcset do <img> (ex: "url1 1x, url2 2x"),
@@ -1638,12 +1678,13 @@ async function rasparEmParalelo(produtos, { limite, headless }, aoRaspar) {
 // rasparEmParalelo), grava cada um quando a raspagem dele termina e só no fim
 // aplica os strikes.
 //
-// Uso: node worker.js [busca ...] [--paginas N | --primeiras N] [--dry-run] [--headless]
+// Uso: node worker.js [busca ...] [--paginas N | --primeiras N | --ate-conhecido N] [--dry-run] [--headless]
 //   node worker.js                 -> todos os produtos
 //   node worker.js iphone          -> só o iPhone (categoria inteira: aplica strikes nela)
 //   node worker.js ps5 xbox        -> só esses; strike só nas categorias 100% raspadas (aqui, nenhuma)
 //   node worker.js --paginas 1     -> teste rápido (última página); raspagem parcial nunca aplica strikes
 //   node worker.js --primeiras 5   -> só as 5 primeiras páginas (anúncios novos); também sem strikes
+//   node worker.js --ate-conhecido 10 -> da 1ª página até a 1ª com anúncio já no banco (máx. 10); sem strikes
 //   node worker.js --dry-run       -> só raspa e valida; não usa IA nem grava no banco
 //   node worker.js --verificar-strikes -> não raspa: confere no OLX quem tem strike e apaga os vendidos
 async function run() {
@@ -1670,7 +1711,7 @@ async function run() {
         `Ciclo com ${selecionados.length} produto(s): ${selecionados.map((p) => p.busca).join(', ')}` +
         ` (até ${SCRAPER_PARALELO} raspagem(ns) ao mesmo tempo)` +
         `${opts.dryRun ? ' [DRY-RUN]' : ''}` +
-        `${parcial ? ` [${opts.primeiras ? 'primeiras' : 'últimas'} ${opts.paginas} página(s): raspagem parcial, sem strikes]` : ''}`
+        `${parcial ? ` [${opts.ateConhecido ? 'até o 1º anúncio conhecido, máx.' : opts.primeiras ? 'primeiras' : 'últimas'} ${opts.paginas} página(s): raspagem parcial, sem strikes]` : ''}`
     );
 
     // Um produto com problema não derruba os outros; a categoria dele fica sem

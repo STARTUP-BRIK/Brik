@@ -1,9 +1,11 @@
-name: Raspagem 5 primeiras páginas
+name: Raspagem de novos
 
+# Da página 1 (mais recentes) em diante, parando na 1ª página que trouxer um
+# anúncio já no banco: só o que entrou no OLX desde a última passada.
 # Sem schedule: o do GitHub atrasava horas ou pulava execuções. Quem dispara
-# é o pg_cron do Supabase (job 'raspagem-recentes'): 09h17, 11h17, ..., 23h17 em
-# Recife = 12h17, 14h17, ..., 02h17 UTC. A completa roda às 07h17; de 00h às 07h
-# nada roda.
+# é o pg_cron do Supabase (jobs 'raspagem-recentes' e 'raspagem-recentes-inicio'):
+# de 20 em 20 minutos depois da completa, das 07h37 às 23h57 em Recife
+# (10h37 às 02h57 UTC). A completa roda às 07h17; de 00h às 07h nada roda.
 on:
   workflow_dispatch:
     inputs:
@@ -12,9 +14,9 @@ on:
         type: string
         default: ''
       paginas:
-        description: 'Quantas das primeiras páginas raspar'
+        description: 'Máximo de páginas por produto, caso nenhuma traga anúncio já no banco'
         type: string
-        default: '5'
+        default: '10'
       dry_run:
         description: 'Dry-run: só raspa, sem IA e sem gravar no banco'
         type: boolean
@@ -30,7 +32,7 @@ jobs:
     secrets: inherit
     with:
       buscas: ${{ inputs.buscas }}
-      paginas: ${{ inputs.paginas || '5' }}
-      primeiras: true
+      paginas: ${{ inputs.paginas || '10' }}
+      ate_conhecido: true
       dry_run: ${{ inputs.dry_run == true }}
-      timeout: 60
+      timeout: 30

@@ -18,6 +18,7 @@ import unicodedata
 import zipfile
 from pathlib import Path
 from time import sleep
+from urllib.parse import urlparse
 from typing import Optional
 
 from selenium import webdriver
@@ -35,6 +36,10 @@ CATEGORIA    = 'celulares' # 'celulares' ou 'games'
 CONDICAO     = 'usado'     # 'novo', 'usado' ou 'defeito'
 PAGINAS      = 100    # quantas páginas raspar (None = só a 1ª)
 PRIMEIRAS    = False  # True: as PAGINAS primeiras (mais recentes) em vez das últimas
+# IDs de anúncio já no banco (--ate-conhecido). Com eles, raspa da página 1 em
+# diante e para na primeira página que trouxer um anúncio conhecido (PAGINAS
+# vira só o teto). None = desligado.
+CONHECIDOS   = None
 
 # Pasta onde cada JSON de execução é salvo.
 # Usa o diretório do próprio script para funcionar corretamente
@@ -416,6 +421,12 @@ def raspar_pagina_com_retry(driver, url: str, condicao: str) -> Optional[list[di
     return None
 
 
+def id_anuncio(link: str) -> Optional[str]:
+    """ID numérico do anúncio no fim do path (mesma regra do normalizeUrl do worker)."""
+    m = re.search(r'(\d{6,})(?:\.html?)?/?$', urlparse(link or '').path, re.IGNORECASE)
+    return m.group(1) if m else None
+
+
 def slugify(texto: str) -> str:
     """Normaliza um texto para uso seguro em nome de arquivo (sem acento, espaço, %20 etc.)."""
     texto = texto.replace('%20', '-')
@@ -475,25 +486,31 @@ def main():
 
     # Respeita o limite configurado em PAGINAS. As duas janelas são percorridas
     # de trás pra frente (ver o loop abaixo).
-    if PRIMEIRAS:
+    if CONHECIDOS is not None:
+        # Da 1ª (mais recente) pra frente: o fim é decidido pelo 1º anúncio conhecido.
+        pagina_inicio = 1
+        pagina_fim    = min(paginas_limite, ultima_pagina)
+    elif PRIMEIRAS:
         pagina_inicio = min(paginas_limite, ultima_pagina)
         pagina_fim    = 1
     else:
         pagina_inicio = ultima_pagina
         pagina_fim    = max(1, ultima_pagina - paginas_limite + 1)
-    paginas_total = pagina_inicio - pagina_fim + 1
+    passo = 1 if pagina_fim >= pagina_inicio else -1
+    paginas_total = abs(pagina_fim - pagina_inicio) + 1
 
     logger.info(
         f'Iniciando: busca="{BUSCA}" categoria={CATEGORIA} condicao={CONDICAO} '
         f'ultima_pagina={ultima_pagina} raspando {paginas_total} pagina(s) '
-        f'{"primeiras " if PRIMEIRAS else ""}'
+        f'{"até o 1º anúncio conhecido " if CONHECIDOS is not None else "primeiras " if PRIMEIRAS else ""}'
         f'({pagina_inicio} -> {pagina_fim})'
     )
 
     try:
-        for pagina in range(pagina_inicio, pagina_fim - 1, -1):  # última → primeira
+        # Última → primeira, menos no modo --ate-conhecido (primeira → frente).
+        for pagina in range(pagina_inicio, pagina_fim + passo, passo):
             url = f'https://www.olx.com.br/{categoria["slug"]}/estado-{ESTADO}?q={BUSCA}&{condicao_qs}&o={pagina}'
-            logger.info(f'[Pagina {pagina} | restam {pagina - pagina_fim} depois desta] {url}')
+            logger.info(f'[Pagina {pagina} | restam {abs(pagina_fim - pagina)} depois desta] {url}')
 
             try:
                 resultado = raspar_pagina_com_retry(driver, url, CONDICAO)
@@ -501,7 +518,7 @@ def main():
                 logger.info(f'Fim da paginação detectado na página {pagina} (sem mais anúncios) - encerrando.')
                 # Raspando da última pra primeira: "sem resultados" com páginas ainda por vir
                 # significa que as de menor número ficaram sem ser raspadas.
-                if pagina > pagina_fim:
+                if passo < 0 and pagina > pagina_fim:
                     interrompida = True
                 break
 
@@ -525,7 +542,15 @@ def main():
             for a in anuncios[:3]:
                 logger.info(f'  -> {a["Titulo"]} | {a["Preco_Raw"]} | {a["Local"]} | {a["Data"]}')
 
-            if pagina > pagina_fim:
+            # A página inteira já foi lida (o custo é carregá-la), então fica com ela
+            # toda; só não segue pra próxima.
+            if CONHECIDOS is not None:
+                conhecidos = sum(1 for a in anuncios if id_anuncio(a['Link']) in CONHECIDOS)
+                if conhecidos:
+                    logger.info(f'{conhecidos} anuncio(s) da pagina {pagina} ja estao no banco - encerrando.')
+                    break
+
+            if pagina != pagina_fim:
                 sleep(random.uniform(2, 5))  # delay humano entre páginas
     finally:
         driver.quit()
@@ -637,6 +662,9 @@ def ler_argumentos() -> argparse.Namespace:
     p.add_argument('--paginas', type=int, help='quantas páginas raspar')
     p.add_argument('--primeiras', action='store_true',
                    help='raspa as --paginas PRIMEIRAS páginas (mais recentes) em vez das últimas')
+    p.add_argument('--ate-conhecido', metavar='ARQUIVO',
+                   help='JSON com a lista de IDs de anúncio já no banco: raspa da página 1 em diante e '
+                        'para na 1ª página com um deles (--paginas vira o teto)')
     p.add_argument('--headless', action='store_true', help='roda sem abrir janela')
     p.add_argument('--anuncios', metavar='ARQUIVO',
                    help='em vez de raspar a busca, lê o JSON-LD dos anúncios listados no ARQUIVO '
@@ -658,6 +686,8 @@ if __name__ == '__main__':
         PAGINAS = _args.paginas
     if _args.primeiras:
         PRIMEIRAS = True
+    if _args.ate_conhecido:
+        CONHECIDOS = set(json.loads(Path(_args.ate_conhecido).read_text(encoding='utf-8')))
     if _args.headless:
         HEADLESS = True
     if _args.anuncios:
