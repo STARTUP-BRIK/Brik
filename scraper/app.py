@@ -11,6 +11,7 @@ import argparse
 import datetime
 import json
 import logging
+import os
 import random
 import re
 import tempfile
@@ -192,6 +193,22 @@ def criar_driver(headless: bool = True, usar_proxy: bool = False) -> webdriver.C
     options.add_argument('--no-sandbox')             # necessário rodando como root em VPS/container
     options.add_argument('--disable-dev-shm-usage')  # evita crash por pouco /dev/shm em VPS pequenas
     options.page_load_strategy = 'eager'             # não espera CSS/imagens/fontes
+
+    # VPS pequena (2 vCPU / 4 GB, ver CHROMES_MAX no worker): Chrome com menos
+    # processos e menos memória. Só liga com CHROME_LEVE=true, pra não mexer no que
+    # já passa pelo Cloudflare no Actions. Sem --disable-gpu de propósito: ele pode
+    # desligar o WebGL, que entra na impressão digital que o Cloudflare olha.
+    if os.environ.get('CHROME_LEVE') == 'true':
+        for flag in (
+            '--mute-audio',
+            '--no-first-run',
+            '--disable-features=Translate,MediaRouter,OptimizationHints',
+            '--renderer-process-limit=2',      # uma aba por vez: não precisa de mais renderizadores
+            '--js-flags=--max-old-space-size=512',
+        ):
+            options.add_argument(flag)
+        if not usar_proxy:
+            options.add_argument('--disable-extensions')  # o proxy autenticado usa uma extensão
 
     # Bloqueia imagens: maior economia de banda/proxy (~10x menos tráfego)
     prefs = {"profile.managed_default_content_settings.images": 2}

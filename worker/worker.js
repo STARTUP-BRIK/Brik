@@ -117,6 +117,12 @@ const PYTHON_TIMEOUT_MS = Number(process.env.PYTHON_TIMEOUT_MS) || 30 * 60 * 100
 // de cada uma. 1 = em sequência, como era antes.
 const SCRAPER_PARALELO = Math.max(1, Math.floor(Number(process.env.SCRAPER_PARALELO)) || 3);
 const SCRAPER_ESCALONAMENTO_MS = 10000;
+// Teto de Chromes abertos ao mesmo tempo, somando tudo que abre o app.py: as
+// raspagens e a leitura de páginas de anúncio (descrições, strikes). Padrão =
+// raspagens + 1 (a leitura das descrições roda junto com as raspagens), como no
+// Actions. Numa VPS pequena (2 vCPU / 4 GB), SCRAPER_PARALELO=2 e CHROMES_MAX=2:
+// quem passar do teto espera a vez em vez de abrir mais um Chrome.
+const CHROMES_MAX = Math.max(1, Math.floor(Number(process.env.CHROMES_MAX)) || SCRAPER_PARALELO + 1);
 
 const BATCH_SIZE = 25;
 
@@ -202,7 +208,39 @@ function prefixarLinhas(destino, prefixo) {
     };
 }
 
-async function runPythonScript(scriptArgs, { tag = 'scraper' } = {}) {
+// Vagas de Chrome (CHROMES_MAX): cada execução do app.py é um Chrome. Fila por
+// ordem de chegada; a vaga é devolvida quando o processo termina, então ninguém
+// segura vaga enquanto espera outra coisa (sem impasse entre raspagem e gravação).
+function criarVagas(total) {
+    let livres = total;
+    const espera = [];
+    return {
+        async pegar() {
+            if (livres > 0) {
+                livres--;
+                return;
+            }
+            await new Promise((resolve) => espera.push(resolve));
+        },
+        devolver() {
+            const proximo = espera.shift();
+            if (proximo) proximo();
+            else livres++;
+        },
+    };
+}
+const vagasChrome = criarVagas(CHROMES_MAX);
+
+async function runPythonScript(scriptArgs, opcoes = {}) {
+    await vagasChrome.pegar();
+    try {
+        return await executarPython(scriptArgs, opcoes);
+    } finally {
+        vagasChrome.devolver();
+    }
+}
+
+async function executarPython(scriptArgs, { tag = 'scraper' } = {}) {
     if (!PYTHON_SCRIPT_PATH) {
         throw new Error('PYTHON_SCRIPT_PATH não está definido. Configure o caminho do app.py no .env.');
     }
@@ -1715,7 +1753,7 @@ async function run() {
     }
     console.log(
         `Ciclo com ${selecionados.length} produto(s): ${selecionados.map((p) => p.busca).join(', ')}` +
-        ` (até ${SCRAPER_PARALELO} raspagem(ns) ao mesmo tempo)` +
+        ` (até ${SCRAPER_PARALELO} raspagem(ns) ao mesmo tempo, no máximo ${CHROMES_MAX} Chrome(s) no total)` +
         `${opts.dryRun ? ' [DRY-RUN]' : ''}` +
         `${parcial ? ` [${opts.ateConhecido ? 'até o 1º anúncio conhecido, máx.' : opts.primeiras ? 'primeiras' : 'últimas'} ${opts.paginas} página(s): raspagem parcial, sem strikes]` : ''}`
     );
