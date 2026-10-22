@@ -224,6 +224,11 @@ def criar_driver(headless: bool = True, usar_proxy: bool = False) -> webdriver.C
 
     driver = webdriver.Chrome(options=options)
 
+    # O OLX desenha a data do card ("Hoje, 14:32") no fuso do navegador, e a máquina
+    # do Actions está em UTC: sem isso a hora vinha 3h adiantada (e "Hoje" virava o
+    # dia seguinte das 21h à meia-noite). normalizar_data e o worker contam com Brasília.
+    driver.execute_cdp_cmd('Emulation.setTimezoneOverride', {'timezoneId': 'America/Sao_Paulo'})
+
     # Bloqueia CSS/fontes via CDP (prefs do Chrome só cobrem imagens, não CSS)
     driver.execute_cdp_cmd('Network.enable', {})
     driver.execute_cdp_cmd('Network.setBlockedURLs', {
