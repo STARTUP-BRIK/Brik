@@ -75,10 +75,12 @@ const SECOES = [
     titulo: '7. Planos',
     texto: (
       <>
-        O Brik tem um plano gratuito e planos pagos com mais recursos. Preços, forma de cobrança,
-        renovação e cancelamento são informados na tela de planos antes da contratação. Nas compras
-        pela internet, você pode desistir em até 7 dias, como garante o Código de Defesa do
-        Consumidor.
+        O Brik tem um plano gratuito e planos pagos com mais recursos. Preços e forma de cobrança
+        são informados na tela de planos antes da contratação. Os pagamentos são processados pelo
+        Asaas, e a assinatura renova sozinha a cada período até ser cancelada. Você pode cancelar
+        quando quiser em Meu Perfil → Meu plano: o plano pago continua até o fim do período já pago
+        e não há novas cobranças. Nas compras pela internet, você pode desistir em até 7 dias, como
+        garante o Código de Defesa do Consumidor; nesse caso, devolvemos o valor pago.
       </>
     ),
   },

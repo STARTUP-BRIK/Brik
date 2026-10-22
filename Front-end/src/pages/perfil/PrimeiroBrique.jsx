@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ChevronRightIcon } from '../../components/icons.jsx'
 import { Nota, SubPagina } from '../../components/SubPagina.jsx'
+import { URL_PUBLICA_MIDIA } from '../../lib/r2.js'
 import { usePreferenciasStore } from '../../stores/usePreferenciasStore.js'
 
 // "Passos para seu primeiro Brique", aberto pelo card do Meu Perfil. Um roteiro
@@ -71,6 +72,17 @@ function PrimeiroBrique() {
           <div className="h-full rounded-full bg-mint transition-[width] duration-300" style={{ width: `${pct}%` }} />
         </div>
       </div>
+
+      {/* Vídeo do passo a passo, em pé (9:16). Altura limitada para caber na tela
+          do celular; só os metadados carregam antes do play. */}
+      <video
+        src={`${URL_PUBLICA_MIDIA}/videos/primeiro-brique.mp4`}
+        controls
+        playsInline
+        preload="metadata"
+        aria-label="Vídeo: como fazer seu primeiro Brique"
+        className="mx-auto aspect-[9/16] w-full max-w-[min(24rem,calc(70dvh*9/16))] rounded-2xl bg-black ring-1 ring-line"
+      />
 
       <ol className="flex flex-col gap-2.5">
         {PASSOS.map(({ titulo, texto, link }, i) => {

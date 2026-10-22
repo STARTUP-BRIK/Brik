@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { NavLink, useLocation, useNavigate, useViewTransitionState } from 'react-router-dom'
-import { NAV_ITEMS, ADD_ITEM } from '../config/navItems.js'
+import { Link, NavLink, useLocation, useNavigate, useViewTransitionState } from 'react-router-dom'
+import { NAV_ITEMS, ADD_ITEM, ADD_MENU } from '../config/navItems.js'
 import { PlusIcon } from './icons.jsx'
 
 const SPRING = 'cubic-bezier(0.22, 1.12, 0.36, 1)'
@@ -27,6 +27,15 @@ function Navbar() {
   const navigate = useNavigate()
   const activeIndex = getActiveIndex(pathname)
   const [pressed, setPressed] = useState(false)
+  // Menu do "+": escolher entre o estoque e o Verificar IMEI. Fecha ao trocar de
+  // tela, ao tocar fora e no Esc.
+  const [menuAberto, setMenuAberto] = useState(false)
+  const [menuDaRota, setMenuDaRota] = useState(pathname)
+  if (menuDaRota !== pathname) {
+    setMenuDaRota(pathname)
+    setMenuAberto(false)
+  }
+  const navRef = useRef(null)
   // A conta da calculadora é tela cheia, sem navbar. Só nas navegações de/para ela
   // a barra ganha um view-transition-name, e o index.css a faz descer ao sair e
   // subir ao voltar. Nas trocas de aba o nome fica de fora, para não transformar a barra
@@ -177,6 +186,20 @@ function Navbar() {
     return () => observer.disconnect()
   }, [])
 
+  useEffect(() => {
+    if (!menuAberto) return
+    const fora = (event) => {
+      if (!navRef.current?.contains(event.target)) setMenuAberto(false)
+    }
+    const esc = (event) => event.key === 'Escape' && setMenuAberto(false)
+    document.addEventListener('pointerdown', fora)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('pointerdown', fora)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [menuAberto])
+
   function onPointerDown(event) {
     const index = Number(event.target.closest('a')?.dataset.index)
     const grabbed = index === activeIndex
@@ -269,10 +292,36 @@ function Navbar() {
 
   return (
     <nav
+      ref={navRef}
       aria-label="Navegação principal"
       className="navbar-enter fixed inset-x-0 bottom-4 z-50 mx-auto w-[calc(100%-2rem)] max-w-sm lg:hidden"
       style={toCalculator && !chegando ? { viewTransitionName: 'navbar' } : undefined}
     >
+      {menuAberto && (
+        <ul
+          id="menu-adicionar"
+          className="menu-adicionar absolute inset-x-6 bottom-full mb-3 flex flex-col gap-1 rounded-3xl bg-surface-card p-2 shadow-xl ring-1 ring-line"
+        >
+          {ADD_MENU.map(({ path, label, descricao, Icon }) => (
+            <li key={path}>
+              <Link
+                to={path}
+                viewTransition
+                className="flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors active:bg-surface-raise"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brik text-paper">
+                  <Icon aria-hidden="true" className="h-6 w-6" />
+                </span>
+                <span>
+                  <span className="block text-[15px] font-bold text-ink">{label}</span>
+                  <span className="block text-xs text-ink/60">{descricao}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div
         ref={rowRef}
         className="relative flex touch-none select-none items-center "
@@ -288,15 +337,18 @@ function Navbar() {
         <ul className="relative z-[2] flex w-full items-center p-1.5">
           {renderItems(LEFT_ITEMS, 0)}
           <li className="flex shrink-0 justify-center px-1">
-            <NavLink
-              to={ADD_ITEM.path}
-              viewTransition
+            <button
+              type="button"
+              onClick={() => setMenuAberto((aberto) => !aberto)}
               aria-label={ADD_ITEM.label}
-              draggable={false}
+              aria-expanded={menuAberto}
+              aria-controls="menu-adicionar"
               className="glass-add flex h-14 w-14 items-center justify-center rounded-full text-paper"
             >
-              <PlusIcon className="h-7 w-7" />
-            </NavLink>
+              <PlusIcon
+                className={`h-7 w-7 transition-transform duration-300 ${menuAberto ? 'rotate-45' : ''}`}
+              />
+            </button>
           </li>
           {renderItems(RIGHT_ITEMS, SPLIT)}
         </ul>

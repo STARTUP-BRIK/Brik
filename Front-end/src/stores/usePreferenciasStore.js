@@ -43,11 +43,15 @@ export const PREFERENCIAS_PADRAO = {
 
   // Notificações. boa/otima/extraordinaria: e-mail por oportunidade daquele
   // nível (worker/notificacoes.js, mesmo padrão em NIVEIS_PADRAO; "bom negócio"
-  // começa desligado por ser volume alto). Os outros ainda não são enviados.
+  // começa desligado por ser volume alto). defeito: também avisa de anúncio com
+  // defeito informado; vem da resposta do onboarding e, em conta antiga sem a
+  // chave, de mostrarDefeito (lib/sincronizarConta.js e o worker fazem igual).
+  // Os outros ainda não são enviados.
   notificacoes: {
     boa: false,
     otima: true,
     extraordinaria: true,
+    defeito: true,
     estoqueParado: false,
     novidades: false,
   },

@@ -1,10 +1,13 @@
 // Apaga a conta de quem está logado. O site não pode fazer isso sozinho (precisa
 // da chave de serviço do Supabase), então passa por aqui:
 //   1. apaga as fotos da pessoa no R2 (pasta <user_id>/ dos buckets);
-//   2. apaga o usuário em auth.users. As tabelas do public (profiles,
+//   2. remove a assinatura no Asaas, se houver, para não cobrar quem saiu;
+//   3. apaga o usuário em auth.users. As tabelas do public (profiles,
 //      preferencias, estoque, salvos, calculos, configuracoes, interesses_notificacao,
-//      notificacoes_enviadas) têm FK com ON DELETE CASCADE e somem junto.
-// Secrets: os mesmos R2_* da função "r2". A chave de serviço o Supabase já injeta.
+//      notificacoes_enviadas, consultas_imei, assinaturas) têm FK com ON DELETE
+//      CASCADE e somem junto.
+// Secrets: os mesmos R2_* da função "r2" e o ASAAS_API_KEY (o ambiente sai da
+// chave, como no asaas-checkout). A chave de serviço o Supabase já injeta.
 //
 // POST JSON { confirmar: true } -> { ok: true }
 
@@ -31,6 +34,30 @@ const chaveServico =
 const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '', chaveServico, {
   auth: { persistSession: false, autoRefreshToken: false },
 })
+
+const asaasKey = Deno.env.get('ASAAS_API_KEY')
+const asaasUrl =
+  Deno.env.get('ASAAS_API_URL') ||
+  (asaasKey?.startsWith('$aact_hmlg_') ? 'https://api-sandbox.asaas.com/v3' : 'https://api.asaas.com/v3')
+
+// Remove a assinatura no Asaas. Se falhar, a conta não é apagada: melhor tentar
+// de novo do que apagar e o Asaas seguir cobrando.
+async function cancelarAssinatura(uid: string) {
+  const { data } = await admin
+    .from('assinaturas')
+    .select('asaas_subscription_id, status')
+    .eq('user_id', uid)
+    .maybeSingle()
+  if (!data?.asaas_subscription_id || data.status === 'cancelada') return
+  if (!asaasKey) throw new Error('Falta o secret ASAAS_API_KEY para cancelar a assinatura.')
+  const resposta = await fetch(`${asaasUrl}/subscriptions/${data.asaas_subscription_id}`, {
+    method: 'DELETE',
+    headers: { access_token: asaasKey, 'User-Agent': 'Brik' },
+  })
+  if (!resposta.ok && resposta.status !== 404) {
+    throw new Error(`Asaas DELETE respondeu ${resposta.status}: ${await resposta.text()}`)
+  }
+}
 
 const desescapar = (texto: string) =>
   texto.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
@@ -87,6 +114,7 @@ Deno.serve(async (req) => {
   try {
     // Fotos primeiro: se o R2 falhar, a conta continua e a pessoa pode tentar de novo.
     await apagarFotos(uid)
+    await cancelarAssinatura(uid)
     const { error: erroAuth } = await admin.auth.admin.deleteUser(uid)
     if (erroAuth) throw erroAuth
     return responder({ ok: true })
