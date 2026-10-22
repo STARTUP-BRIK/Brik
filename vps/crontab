@@ -1,0 +1,18 @@
+# Agendamento do Brik na VPS (crontab do usuário brik). O servidor está no fuso
+# de Recife (instalar.sh), então os horários abaixo já são os de Recife.
+# Instalado por vps/ativar-cron.sh, só depois de desligar os disparos do pg_cron
+# para o GitHub (senão cada raspagem roda duas vezes).
+#
+# Mesmos horários dos workflows:
+#   completa   07h17 (scrape.yml)
+#   recentes   de 20 em 20 min depois da completa, 07h37 às 23h57 (scrape-recentes.yml)
+#   verificar  12h00 (verificar-strikes.yml)
+# Uma tarefa por vez (flock no rodar.sh): a de recentes desiste se a completa ou a
+# verificação estiverem rodando; essas duas esperam a vez.
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+
+17 7 * * *          bash $HOME/Brik/vps/rodar.sh completa
+37,57 7 * * *       bash $HOME/Brik/vps/rodar.sh recentes
+17,37,57 8-23 * * * bash $HOME/Brik/vps/rodar.sh recentes
+0 12 * * *          bash $HOME/Brik/vps/rodar.sh verificar

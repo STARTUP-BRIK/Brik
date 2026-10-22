@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Scripts da VPS rodam no Linux: sempre LF (CRLF quebra o bash e o crontab).
+*.sh text eol=lf
+vps/crontab text eol=lf
