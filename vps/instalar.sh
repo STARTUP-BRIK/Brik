@@ -48,7 +48,9 @@ PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitRootLogin prohibit-password
 EOF
-systemctl reload ssh || systemctl reload sshd
+# No Ubuntu 24.04 o ssh.service só sobe quando chega uma conexão (ssh.socket):
+# parado, não há o que recarregar, e a config nova vale a partir da próxima.
+sshd -t && (systemctl try-reload-or-restart ssh || true)
 
 passo "Swap de 4 GB (folga para os picos de memória dos Chromes)"
 if ! swapon --show | grep -q '/swapfile'; then
