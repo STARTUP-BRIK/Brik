@@ -219,6 +219,59 @@ body {
   .nav-rotulo { transition: none; }
 }
 
+/* Barra compacta do Início (CabecalhoCompacto, celular) ---------------------
+   Escondida fica acima da tela. Ao aparecer, desce com uma leve mola e o "B" e
+   as abas entram em seguida, um de cada vez (pelo --i), subindo de leve. O
+   traço da aba ativa desliza de uma aba para a outra. Ao sumir, sobe direto,
+   sem cascata. */
+.barra-compacta {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 1, 1), opacity 0.2s ease;
+}
+
+.barra-compacta-visivel {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+  transition: transform 0.45s cubic-bezier(0.22, 1.25, 0.36, 1), opacity 0.2s ease;
+}
+
+.barra-compacta-item {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+
+.barra-compacta-visivel .barra-compacta-item {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), color 0.15s ease;
+  transition-delay: calc(0.08s + (var(--i, -1) + 1) * 0.06s), calc(0.08s + (var(--i, -1) + 1) * 0.06s), 0s;
+}
+
+.barra-compacta-traco {
+  transition: left 0.3s cubic-bezier(0.22, 1, 0.36, 1), width 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barra-compacta,
+  .barra-compacta-visivel {
+    transform: none;
+    transition: opacity 0.15s ease;
+  }
+
+  .barra-compacta-item,
+  .barra-compacta-visivel .barra-compacta-item {
+    opacity: 1;
+    transform: none;
+    transition: color 0.15s ease;
+  }
+
+  .barra-compacta-traco { transition: opacity 0.15s ease; }
+}
+
 /* Filtros do Início (FiltroRaio e FiltroOfertas) --------------------------
    Os dois abrem um painel sob a pílula (.painel-pop), com os itens entrando em
    cascata (.painel-item, pelo --i). O de ofertas ainda anima o selo de filtros

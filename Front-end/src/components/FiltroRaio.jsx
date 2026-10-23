@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDownIcon, PinIcon } from './icons.jsx'
 import { MapaReal } from '../pages/onboarding/MapaReal.jsx'
-import { classeBotaoPainel, classePosicaoPainel, useFecharPainel } from '../lib/usePainel.js'
+import { classeBotaoCompacto, classeBotaoPainel, classePainelCompacto, classePosicaoPainel, useFecharPainel } from '../lib/usePainel.js'
 
 // Filtro de raio do Início: uma pílula de vidro sobre o petróleo (ou, com
 // `lateral`, o botão da coluna do desktop) que abre um painel com o mapa do raio
@@ -9,6 +9,8 @@ import { classeBotaoPainel, classePosicaoPainel, useFecharPainel } from '../lib/
 // do onboarding; o feed mostra só os anúncios até ele (o filtro em si é em
 // Home). `centro`: o ponto de partida ({ lat, lng }) ou null, quando não se sabe
 // de onde a pessoa sai. `local`: o nome dele. `total`: ofertas dentro do raio.
+// `compacto`: na barra compacta do celular, só o ícone; o painel fecha quando
+// ela some (`oculto`).
 
 const ATALHOS = [5, 10, 20, 50]
 // Raio do círculo no mapa, em px.
@@ -16,8 +18,13 @@ const RAIO_NO_MAPA = 52
 
 const plural = (n) => `${n} ${n === 1 ? 'oferta' : 'ofertas'}`
 
-function FiltroRaio({ raio, onRaio, centro, local, total, lateral = false }) {
+function FiltroRaio({ raio, onRaio, centro, local, total, lateral = false, compacto = false, oculto = false }) {
   const [aberto, setAberto] = useState(false)
+  const [ocultoAntes, setOcultoAntes] = useState(oculto)
+  if (oculto !== ocultoAntes) {
+    setOcultoAntes(oculto)
+    if (oculto) setAberto(false)
+  }
   const raizRef = useRef(null)
   const botaoRef = useRef(null)
   const reguaRef = useRef(null)
@@ -28,8 +35,25 @@ function FiltroRaio({ raio, onRaio, centro, local, total, lateral = false }) {
     if (aberto) reguaRef.current?.focus({ preventScroll: true })
   }, [aberto])
 
+  // Os três filtros de raio podem estar na página ao mesmo tempo.
+  const idRegua = lateral ? 'raio-lateral' : compacto ? 'raio-compacto' : 'raio'
+
   return (
-    <div ref={raizRef} className={`relative ${lateral ? 'w-full' : 'w-fit'}`}>
+    // Na barra compacta o painel se alinha à barra (o pai relativo).
+    <div ref={raizRef} className={compacto ? '' : `relative ${lateral ? 'w-full' : 'w-fit'}`}>
+      {compacto ? (
+        <button
+          ref={botaoRef}
+          type="button"
+          aria-haspopup="true"
+          aria-expanded={aberto}
+          aria-label={`Raio de busca: ${centro ? `até ${raio} km` : 'todas as cidades'}`}
+          onClick={() => setAberto((a) => !a)}
+          className={classeBotaoCompacto(aberto)}
+        >
+          <PinIcon aria-hidden="true" className="h-5 w-5 shrink-0" />
+        </button>
+      ) : (
       <button
         ref={botaoRef}
         type="button"
@@ -60,10 +84,11 @@ function FiltroRaio({ raio, onRaio, centro, local, total, lateral = false }) {
           }`}
         />
       </button>
+      )}
 
       {aberto && (
         <div
-          className={`painel-pop ${classePosicaoPainel(lateral)} overflow-hidden rounded-2xl bg-surface-card p-3 text-ink ring-1 ring-line sm:p-4`}
+          className={`painel-pop ${compacto ? classePainelCompacto : `${classePosicaoPainel(lateral)} overflow-hidden`} rounded-2xl bg-surface-card p-3 text-ink ring-1 ring-line sm:p-4`}
         >
           {centro ? (
             <>
@@ -78,14 +103,14 @@ function FiltroRaio({ raio, onRaio, centro, local, total, lateral = false }) {
               </div>
 
               <div className="mt-3 flex items-baseline justify-between">
-                <label htmlFor={lateral ? 'raio-lateral' : 'raio'} className="text-sm font-bold">
+                <label htmlFor={idRegua} className="text-sm font-bold">
                   Raio
                 </label>
                 <span className="text-xl font-bold tabular-nums text-brik">{raio} km</span>
               </div>
               <input
                 ref={reguaRef}
-                id={lateral ? 'raio-lateral' : 'raio'}
+                id={idRegua}
                 type="range"
                 min="1"
                 max="100"

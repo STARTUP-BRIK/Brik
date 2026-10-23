@@ -3,7 +3,7 @@ import { ChevronDownIcon, FilterIcon } from './icons.jsx'
 import { NIVEIS } from '../config/categorias.js'
 import { formatBRL, formatInt } from '../lib/format.js'
 import { ORDENS, PERIODOS } from '../lib/postagem.js'
-import { classeBotaoPainel, classePosicaoPainel, useFecharPainel } from '../lib/usePainel.js'
+import { classeBotaoCompacto, classeBotaoPainel, classePainelCompacto, classePosicaoPainel, useFecharPainel } from '../lib/usePainel.js'
 
 // Botão "Filtros" do header verde do Início, ao lado da cidade. Abre um painel
 // com os selos (quais aparecem), os aparelhos com defeito, a data do anúncio
@@ -56,11 +56,20 @@ function FiltroOfertas({
   resultado,
   onLimpar,
   lateral = false,
+  compacto = false,
+  oculto = false,
 }) {
   const [aberto, setAberto] = useState(false)
   const raizRef = useRef(null)
   const botaoRef = useRef(null)
   useFecharPainel(aberto, setAberto, raizRef, botaoRef)
+
+  // Na barra compacta (`compacto`), o painel fecha junto quando a barra some.
+  const [ocultoAntes, setOcultoAntes] = useState(oculto)
+  if (oculto !== ocultoAntes) {
+    setOcultoAntes(oculto)
+    if (oculto) setAberto(false)
+  }
 
   const filtraNivel = niveis.length < permitidos.length
   const ativos =
@@ -98,21 +107,27 @@ function FiltroOfertas({
 
   return (
     // No header do celular o painel se alinha à linha dos filtros (o pai
-    // relativo, em Home), senão sairia da tela; na coluna lateral, ao botão.
-    <div ref={raizRef} className={lateral ? 'relative w-full' : 'lg:relative'}>
+    // relativo, em Home), senão sairia da tela; na coluna lateral, ao botão; na
+    // barra compacta, à própria barra (o pai relativo, em CabecalhoCompacto).
+    <div ref={raizRef} className={lateral ? 'relative w-full' : compacto ? '' : 'lg:relative'}>
       <button
         ref={botaoRef}
         type="button"
         aria-haspopup="true"
         aria-expanded={aberto}
+        aria-label={compacto ? 'Filtros' : undefined}
         onClick={() => setAberto((a) => !a)}
-        className={classeBotaoPainel(lateral, aberto, true)}
+        className={
+          compacto
+            ? classeBotaoCompacto(aberto)
+            : classeBotaoPainel(lateral, aberto, true)
+        }
       >
         <FilterIcon
           aria-hidden="true"
-          className={`shrink-0 ${lateral ? 'h-4 w-4 text-brik' : 'h-3.5 w-3.5 text-mint sm:h-4 sm:w-4'}`}
+          className={`shrink-0 ${compacto ? 'h-5 w-5' : lateral ? 'h-4 w-4 text-brik' : 'h-3.5 w-3.5 text-mint sm:h-4 sm:w-4'}`}
         />
-        {lateral ? (
+        {compacto ? null : lateral ? (
           <span className="min-w-0 flex-1 text-left">
             <span className="block">Filtros</span>
             <span className="block truncate text-[11px] font-normal text-mute">{resumo}</span>
@@ -121,7 +136,13 @@ function FiltroOfertas({
           <span className="max-sm:sr-only">Filtros</span>
         )}
         {ativos > 0 && (
-          <span className="painel-selo flex h-5 min-w-5 items-center justify-center rounded-full bg-mint px-1 text-[11px] font-bold text-brik">
+          <span
+            className={`painel-selo flex items-center justify-center rounded-full font-bold ${
+              compacto
+                ? 'absolute right-0.5 top-0.5 h-4 min-w-4 bg-brik px-1 text-[10px] text-paper'
+                : 'h-5 min-w-5 bg-mint px-1 text-[11px] text-brik'
+            }`}
+          >
             <span className="sr-only">(</span>
             {ativos}
             <span className="sr-only"> ativos)</span>
@@ -139,7 +160,7 @@ function FiltroOfertas({
         <div
           role="group"
           aria-label="Filtros das ofertas"
-          className={`painel-pop ${classePosicaoPainel(lateral)} rounded-2xl bg-surface-card p-3 text-ink ring-1 ring-line sm:p-4`}
+          className={`painel-pop ${compacto ? classePainelCompacto : classePosicaoPainel(lateral)} rounded-2xl bg-surface-card p-3 text-ink ring-1 ring-line sm:p-4`}
         >
           <section className="painel-item" style={{ '--i': 0 }}>
             <h2 className="text-[11px] font-bold uppercase tracking-wide text-mute">Selo da oferta</h2>

@@ -25,6 +25,17 @@ export const classePosicaoPainel = (lateral) =>
     ? 'mt-2 w-full'
     : 'absolute left-0 top-full z-40 mt-2 w-[min(22rem,calc(100vw-2.5rem))] shadow-[0_24px_48px_-16px_rgba(0,0,0,0.5)]'
 
+// Na barra compacta do celular os painéis abrem sob ela, colados à direita, e
+// rolam sozinhos para não passar para trás da Navbar.
+export const classePainelCompacto =
+  'absolute right-2 top-full z-40 mt-2 max-h-[calc(100dvh-10rem)] w-[min(22rem,calc(100vw-1rem))] overflow-y-auto overscroll-contain shadow-[0_24px_48px_-16px_rgba(0,0,0,0.35)]'
+
+// Ícone sozinho dos filtros na barra compacta (raio e Filtros).
+export const classeBotaoCompacto = (aberto) =>
+  `relative flex h-11 w-10 items-center justify-center rounded-full transition-colors hover:bg-surface-raise ${
+    aberto ? 'bg-surface-raise text-ink' : 'text-mute hover:text-ink'
+  }`
+
 // Painel que abre sob um botão (os filtros do Início): enquanto aberto, fecha
 // com clique fora da raiz e com Esc — este devolve o foco ao botão.
 export function useFecharPainel(aberto, setAberto, raizRef, botaoRef) {

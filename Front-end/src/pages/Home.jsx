@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useOpportunitiesStore } from '../stores/useOpportunitiesStore'
 import { usePreferenciasStore } from '../stores/usePreferenciasStore.js'
 import BrandHeader from '../components/BrandHeader.jsx'
+import CabecalhoCompacto from '../components/CabecalhoCompacto.jsx'
 import ProductCard, { ProductCardSkeleton } from '../components/ProductCard.jsx'
 import { SearchIcon } from '../components/icons.jsx'
 import FiltroRaio from '../components/FiltroRaio.jsx'
@@ -54,6 +55,7 @@ function Home({ desfocado = false }) {
 
   const [category, setCategory] = useState(null)
   const [query, setQuery] = useState('')
+  const categoriasRef = useRef(null)
 
   useEffect(() => {
     fetchOpportunities()
@@ -180,11 +182,14 @@ function Home({ desfocado = false }) {
   }
 
   // Raio e Filtros aparecem duas vezes: no header verde (celular) e na coluna
-  // lateral (desktop, `lateral`). Só uma das duas fica visível.
+  // lateral (desktop, `lateral`). Só uma das duas fica visível. Os dois ainda
+  // aparecem na barra compacta do celular (`compacto`), só com o ícone.
   const local = [origem?.bairro, origem?.cidade].filter(Boolean).join(', ')
-  const filtroRaio = (lateral) => (
+  const filtroRaio = (lateral, compacto = false, oculto = false) => (
     <FiltroRaio
       lateral={lateral}
+      compacto={compacto}
+      oculto={oculto}
       raio={raio}
       onRaio={setRaio}
       centro={filtraRaio ? centro : null}
@@ -192,9 +197,11 @@ function Home({ desfocado = false }) {
       total={noRaio.length}
     />
   )
-  const filtroOfertas = (lateral) => (
+  const filtroOfertas = (lateral, compacto = false, oculto = false) => (
     <FiltroOfertas
       lateral={lateral}
+      compacto={compacto}
+      oculto={oculto}
       niveis={niveisAtivos}
       permitidos={permitidos}
       onNiveis={setNiveis}
@@ -246,7 +253,24 @@ function Home({ desfocado = false }) {
         </div>
       </BrandHeader>
 
-      <nav className={`flex justify-center gap-10 px-4 pb-2 pt-5 lg:hidden ${desfoque}`} aria-label="Categorias">
+      {/* Celular: ao rolar para além das categorias, a barra compacta desce do
+          topo com a logo e as mesmas categorias em texto (no onboarding, não). */}
+      {!desfocado && (
+        <CabecalhoCompacto
+          alvoRef={categoriasRef}
+          categorias={visiveisNoFeed}
+          ativa={category}
+          onCategoria={setCategory}
+          filtros={(oculto) => (
+            <>
+              {filtroRaio(false, true, oculto)}
+              {filtroOfertas(false, true, oculto)}
+            </>
+          )}
+        />
+      )}
+
+      <nav ref={categoriasRef} className={`flex justify-center gap-10 px-4 pb-2 pt-5 lg:hidden ${desfoque}`} aria-label="Categorias">
         {visiveisNoFeed.map(({ value, label, Icon }) => {
           const active = category === value
           return (
