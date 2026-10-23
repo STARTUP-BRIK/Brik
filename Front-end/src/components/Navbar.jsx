@@ -22,6 +22,105 @@ function getActiveIndex(pathname) {
 const at = (x, sx = 1, sy = 1) => `translateX(${x}px) scale(${sx}, ${sy})`
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+// Lente de verdade (Liquid Glass): um filtro SVG no backdrop-filter que entorta o
+// que está atrás da bolha. Só o Chromium aplica filtro SVG no fundo; o WebKit
+// (Safari e qualquer navegador do iPhone) e o Firefox ficam com o vidro só em CSS.
+// `userAgentData` só existe no Chromium.
+const REFRACAO =
+  typeof navigator !== 'undefined' &&
+  'userAgentData' in navigator &&
+  CSS.supports('backdrop-filter', 'url(#a)')
+
+// Deslocamento máximo (px) que o mapa consegue descrever, metade para cada lado.
+const LENTE_ESCALA = 80
+
+// Mapa de deslocamento da bolha (uma pílula w x h): o vermelho diz quanto puxar
+// em x e o verde em y, com 128 = parado. Na faixa da borda o fundo é puxado de
+// dentro para fora, como na beirada curva de uma gota, e o miolo amplia como uma
+// lupa. A lente só aparece em movimento, então pode ser forte.
+function mapaDaLente(w, h) {
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  const imagem = ctx.createImageData(w, h)
+  const raio = h / 2
+  const borda = Math.min(14, raio * 0.5) // largura da faixa que refrata
+  const forca = 22 // px puxados para dentro bem na beirada
+  const zoom = 0.2 // ~25% de ampliação no miolo
+  const codifica = (px) => Math.max(0, Math.min(255, Math.round(128 + (px / LENTE_ESCALA) * 255)))
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const px = x + 0.5
+      const py = y + 0.5
+      // Distância até a borda da pílula: até o segmento central, menos o raio.
+      const vx = px - Math.min(Math.max(px, raio), w - raio)
+      const vy = py - raio
+      const dist = Math.hypot(vx, vy)
+      const dentro = raio - dist
+
+      let dx = -(px - w / 2) * zoom
+      let dy = -(py - h / 2) * zoom
+      if (dentro < borda && dist > 0) {
+        const curva = (1 - Math.max(dentro, 0) / borda) ** 2 * forca
+        dx -= (vx / dist) * curva
+        dy -= (vy / dist) * curva
+      }
+
+      const i = (y * w + x) * 4
+      imagem.data[i] = codifica(dx)
+      imagem.data[i + 1] = codifica(dy)
+      imagem.data[i + 2] = 128
+      imagem.data[i + 3] = 255
+    }
+  }
+  ctx.putImageData(imagem, 0, 0)
+  return canvas.toDataURL()
+}
+
+// Cada canal de cor é deslocado com uma força um pouco diferente e depois os três
+// são somados: nas bordas eles se separam, a aberração cromática de uma lente.
+const CANAIS = [
+  { nome: 'r', escala: 1, matriz: '1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0' },
+  { nome: 'g', escala: 0.93, matriz: '0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0' },
+  { nome: 'b', escala: 0.86, matriz: '0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0' },
+]
+
+function FiltroLente({ w, h, mapa }) {
+  return (
+    <svg aria-hidden="true" width="0" height="0" className="absolute">
+      <filter
+        id="lente-navbar"
+        x="0"
+        y="0"
+        width={w}
+        height={h}
+        filterUnits="userSpaceOnUse"
+        primitiveUnits="userSpaceOnUse"
+        colorInterpolationFilters="sRGB"
+      >
+        <feImage href={mapa} x="0" y="0" width={w} height={h} preserveAspectRatio="none" result="mapa" />
+        {CANAIS.map(({ nome, escala, matriz }) => [
+          <feDisplacementMap
+            key={`d${nome}`}
+            in="SourceGraphic"
+            in2="mapa"
+            scale={LENTE_ESCALA * escala}
+            xChannelSelector="R"
+            yChannelSelector="G"
+            result={`d${nome}`}
+          />,
+          <feColorMatrix key={nome} in={`d${nome}`} type="matrix" values={matriz} result={nome} />,
+        ])}
+        <feBlend in="r" in2="g" mode="screen" result="rg" />
+        <feBlend in="rg" in2="b" mode="screen" result="rgb" />
+        <feColorMatrix in="rgb" type="saturate" values="1.4" />
+      </filter>
+    </svg>
+  )
+}
+
 function Navbar() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
@@ -54,6 +153,11 @@ function Navbar() {
 
   const rowRef = useRef(null)
   const lensRef = useRef(null)
+  // A bolha tem duas camadas que andam juntas: o vidro claro, atrás dos ícones, e
+  // a lente que refrata, na frente deles (só no Chromium, ver REFRACAO).
+  const refractRef = useRef(null)
+  const lenses = () => [lensRef.current, refractRef.current].filter(Boolean)
+  const [lente, setLente] = useState(null) // tamanho e mapa do filtro da lente
   const slots = useRef({ x: [], width: 0 }) // posição (px) de cada aba dentro da linha
   const previousIndex = useRef(activeIndex)
   const dragFrom = useRef(null) // posição (px) de onde a bolha foi solta
@@ -71,9 +175,18 @@ function Navbar() {
     const rowBox = row.getBoundingClientRect()
     const boxes = items.map((item) => item.getBoundingClientRect())
     slots.current = { x: boxes.map((box) => box.left - rowBox.left), width: boxes[0].width }
-    lens.style.top = `${boxes[0].top - rowBox.top}px`
-    lens.style.width = `${boxes[0].width}px`
-    lens.style.height = `${boxes[0].height}px`
+    for (const layer of lenses()) {
+      layer.style.top = `${boxes[0].top - rowBox.top}px`
+      layer.style.width = `${boxes[0].width}px`
+      layer.style.height = `${boxes[0].height}px`
+    }
+
+    // O mapa da lente é desenhado no tamanho exato da bolha; só refaz se mudar.
+    const w = Math.round(boxes[0].width)
+    const h = Math.round(boxes[0].height)
+    if (REFRACAO && w && h) {
+      setLente((atual) => (atual?.w === w && atual?.h === h ? atual : { w, h, mapa: mapaDaLente(w, h) }))
+    }
   }
 
   // A bolha de vidro desliza de uma aba à outra e o ícone recém-selecionado dá um
@@ -95,12 +208,13 @@ function Navbar() {
     if (activeIndex === -1) return
 
     const toX = slots.current.x[activeIndex]
-    lens.style.transform = at(toX) // posição final; as animações abaixo partem de onde ela estava
+    // Posição final; as animações abaixo partem de onde ela estava.
+    for (const layer of lenses()) layer.style.transform = at(toX)
 
     if (previous === activeIndex) return
 
-    // O deslize da bolha sempre acontece (é o feedback da navegação); só o pulo do
-    // ícone e o alongamento respeitam "reduzir movimento".
+    // O deslize da bolha sempre acontece (é o feedback da navegação), mas com
+    // "reduzir movimento" fica curto e sem pulo do ícone nem alongamento.
     const calm = reducedMotion()
 
     if (!calm) {
@@ -125,18 +239,22 @@ function Navbar() {
     if (dropped === null && running.length > 0) {
       fromX = new DOMMatrix(getComputedStyle(lens).transform).e
     }
-    running.forEach((animation) => animation.cancel())
+    for (const layer of lenses()) {
+      layer.getAnimations({ subtree: true }).forEach((animation) => animation.cancel())
+    }
     const bubble = lens.firstElementChild
-    bubble.getAnimations({ subtree: true }).forEach((animation) => animation.cancel())
+    const glass = lenses().map((layer) => layer.firstElementChild)
 
     const distance = Math.abs(toX - fromX) / slots.current.width
-    const duration = 760 + Math.min(distance, 3) * 110
+    const duration = calm ? 200 : 760 + Math.min(distance, 3) * 110
 
     // Deslize contínuo: uma única curva de A até B, sem paradas no meio.
-    lens.animate([{ transform: at(fromX) }, { transform: at(toX) }], {
-      duration,
-      easing: GLIDE,
-    })
+    for (const layer of lenses()) {
+      layer.animate([{ transform: at(fromX) }, { transform: at(toX) }], {
+        duration,
+        easing: GLIDE,
+      })
+    }
 
     // Em movimento a bolha "vira líquido": o anel de blur das bordas cresce e fica
     // mais denso enquanto o centro continua nítido sobre o ícone; ao chegar, relaxa.
@@ -160,15 +278,24 @@ function Navbar() {
 
     if (calm) return
 
-    // A gota se alonga no meio do caminho e volta ao normal, em curva própria.
-    bubble.animate(
-      [
-        { transform: 'scale(1, 1)' },
-        { transform: `scale(${Math.min(1 + distance * 0.07, 1.22)}, 0.97)`, offset: 0.5 },
-        { transform: 'scale(1, 1)' },
-      ],
+    // A lupa acende logo na saída, viaja por cima das abas e some ao chegar: parada,
+    // a bolha volta a ser só vidro.
+    refractRef.current?.firstElementChild.animate(
+      [{ opacity: 0 }, { opacity: 1, offset: 0.12 }, { opacity: 1, offset: 0.75 }, { opacity: 0 }],
       { duration, easing: 'ease-in-out' },
     )
+
+    // A gota se alonga no meio do caminho e volta ao normal, em curva própria.
+    for (const layer of glass) {
+      layer.animate(
+        [
+          { transform: 'scale(1, 1)' },
+          { transform: `scale(${Math.min(1 + distance * 0.07, 1.22)}, 0.97)`, offset: 0.5 },
+          { transform: 'scale(1, 1)' },
+        ],
+        { duration, easing: 'ease-in-out' },
+      )
+    }
   }, [activeIndex])
 
   // Reposiciona a bolha se a largura da tela (ou a fonte) mudar os tamanhos.
@@ -178,7 +305,8 @@ function Navbar() {
       if (drag.current.moved) return
       measure()
       const x = slots.current.x[previousIndex.current]
-      if (x !== undefined && lensRef.current) lensRef.current.style.transform = at(x)
+      if (x === undefined) return
+      for (const layer of lenses()) layer.style.transform = at(x)
     }
     const observer = new ResizeObserver(replace)
     observer.observe(row)
@@ -220,12 +348,12 @@ function Navbar() {
       if (Math.abs(dx) < DRAG_THRESHOLD) return
       state.moved = true
       rowRef.current.setPointerCapture(event.pointerId)
-      lens.getAnimations().forEach((animation) => animation.cancel())
+      for (const layer of lenses()) layer.getAnimations().forEach((animation) => animation.cancel())
     }
 
     const { x } = slots.current
     state.x = Math.min(Math.max(state.x0 + dx, x[0]), x[x.length - 1])
-    lens.style.transform = at(state.x, 1.04, 1)
+    for (const layer of lenses()) layer.style.transform = at(state.x, 1.04, 1)
   }
 
   function onPointerEnd() {
@@ -250,12 +378,13 @@ function Navbar() {
       return
     }
 
-    const lens = lensRef.current
-    lens.animate([{ transform: at(state.x, 1.04, 1) }, { transform: at(x[activeIndex]) }], {
-      duration: 450,
-      easing: SPRING,
-    })
-    lens.style.transform = at(x[activeIndex])
+    for (const layer of lenses()) {
+      layer.animate([{ transform: at(state.x, 1.04, 1) }, { transform: at(x[activeIndex]) }], {
+        duration: 450,
+        easing: SPRING,
+      })
+      layer.style.transform = at(x[activeIndex])
+    }
   }
 
   function onPointerLeave() {
@@ -278,14 +407,10 @@ function Navbar() {
           viewTransition
           data-index={offset + i}
           draggable={false}
-          className={({ isActive }) =>
-            `flex h-16 flex-col items-center justify-center gap-1 rounded-full text-[10px] font-medium text-white transition-opacity ${
-              isActive ? 'opacity-100' : 'opacity-75'
-            }`
-          }
+          className="nav-item flex h-16 flex-col items-center justify-center gap-1 rounded-full text-[10px] font-semibold min-[360px]:text-[11px]"
         >
-          <Icon className="h-7 w-7" />
-          <span>{label}</span>
+          <Icon aria-hidden="true" className="h-7 w-7" />
+          <span className="whitespace-nowrap">{label}</span>
         </NavLink>
       </li>
     ))
@@ -294,7 +419,7 @@ function Navbar() {
     <nav
       ref={navRef}
       aria-label="Navegação principal"
-      className="navbar-enter fixed inset-x-0 bottom-4 z-50 mx-auto w-[calc(100%-2rem)] max-w-sm lg:hidden"
+      className="glass-nav navbar-enter fixed inset-x-0 z-50 mx-auto w-[calc(100%-2rem)] max-w-sm lg:hidden"
       style={toCalculator && !chegando ? { viewTransitionName: 'navbar' } : undefined}
     >
       {menuAberto && (
@@ -343,9 +468,10 @@ function Navbar() {
               aria-label={ADD_ITEM.label}
               aria-expanded={menuAberto}
               aria-controls="menu-adicionar"
-              className="glass-add flex h-14 w-14 items-center justify-center rounded-full text-paper"
+              className="glass-add flex h-14 w-14 items-center justify-center rounded-full text-white"
             >
               <PlusIcon
+                aria-hidden="true"
                 className={`h-7 w-7 transition-transform duration-300 ${menuAberto ? 'rotate-45' : ''}`}
               />
             </button>
@@ -362,6 +488,19 @@ function Navbar() {
         >
           <div className="glass-lens h-full w-full rounded-full" data-pressed={pressed} />
         </div>
+
+        {/* A lupa fica na frente dos ícones para ampliá-los e entortá-los nas bordas,
+            como o Liquid Glass. Só aparece no deslize e ao segurar a bolha. */}
+        {REFRACAO && (
+          <div
+            ref={refractRef}
+            aria-hidden="true"
+            className={`pointer-events-none absolute left-0 z-[3] ${activeIndex === -1 ? 'invisible' : ''}`}
+          >
+            <div className="glass-refracao h-full w-full rounded-full" data-pressed={pressed} />
+          </div>
+        )}
+        {lente && <FiltroLente {...lente} />}
       </div>
     </nav>
   )

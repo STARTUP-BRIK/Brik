@@ -10,6 +10,9 @@ function Layout() {
     <ComTopBar.Provider value={true}>
       <TopBar />
       <Outlet />
+      {/* As páginas já reservam o espaço da barra (pb-28); isto soma a área do
+          indicador de início do iPhone, onde a barra sobe para não ficar em cima. */}
+      <div aria-hidden="true" className="h-[env(safe-area-inset-bottom)] lg:hidden" />
       <Navbar />
     </ComTopBar.Provider>
   )
